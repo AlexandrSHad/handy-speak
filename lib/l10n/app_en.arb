@@ -1,0 +1,36 @@
+{
+  "@@locale": "en",
+  "appTitle": "HandySpeak",
+  "modeKeyboard": "Keyboard",
+  "modeSymbols": "Symbols",
+  "settings": "Settings",
+  "speak": "Speak",
+  "speaking": "Speaking…",
+  "clear": "Clear",
+  "myPhrases": "My Phrases",
+  "composePlaceholder": "Tap keys or symbols to compose…",
+  "keySpace": "space",
+  "wordCount": "{count, plural, =0{0 words} =1{1 word} other{{count} words}}",
+  "@wordCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "settingsLanguage": "Language",
+  "settingsLanguageDesc": "Switch the whole board and the speaking voice. Kids can also tap EN / CZ in the top bar.",
+  "settingsVoice": "Speaking voice",
+  "settingsMoodName": "Mood voices",
+  "settingsMoodDesc": "Let the child pick a mood that changes the voice's pitch and speed. Off uses one steady voice.",
+  "settingsPhrases": "Parent · Phrases",
+  "settingsUsed": "used",
+  "settingsPin": "Pin",
+  "settingsUnpin": "Unpin",
+  "settingsAddPhrase": "Add a phrase the child can quickly speak…",
+  "settingsAdd": "Add",
+  "settingsAccessibility": "Accessibility",
+  "settingsHapticName": "Haptic feedback",
+  "settingsHapticDesc": "Vibrate on key/card press (where supported).",
+  "settingsDarkName": "Dark mode",
+  "settingsDarkDesc": "Lower-contrast surfaces for low-light use.",
+  "voiceMissing": "No Czech voice on this tablet yet — add one in your device's speech settings for the best pronunciation."
+}
