@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/theme.dart';
 import '../l10n/app_localizations.dart';
 import '../state/composer_controller.dart';
+import '../state/settings_controller.dart';
 import 'message_blocks.dart';
 import 'speak_button.dart';
 
@@ -91,6 +92,8 @@ class _MessageBarState extends State<MessageBar> {
                         activeIndex: composer.activeIndex,
                         placeholder: l10n.composePlaceholder,
                         onRemove: composer.removeWordAt,
+                        bigLetters:
+                            context.watch<SettingsController>().bigLetters,
                       ),
                     ),
                   ),

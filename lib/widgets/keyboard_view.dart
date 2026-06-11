@@ -41,6 +41,10 @@ class _KeyboardViewState extends State<KeyboardView> {
     final lang = context.watch<LanguageController>().language;
     final rows = kKeyboardLayouts[lang] ?? kKeyboardLayouts[AppLanguage.en]!;
     final lastLetterRow = rows.length - 1;
+    final big = context.watch<SettingsController>().bigLetters;
+    // Big letters mode: shift is treated as OFF (and rendered inert) without
+    // resetting the underlying _shift state (POC parity).
+    final effShift = _shift && !big;
 
     return Column(
       children: [
@@ -48,7 +52,8 @@ class _KeyboardViewState extends State<KeyboardView> {
           Expanded(
             child: _CharRow(
               row: rows[ri],
-              shift: _shift,
+              big: big,
+              effShift: effShift,
               withMods: ri == lastLetterRow,
               onShift: () => setState(() => _shift = !_shift),
               onBackspace: () {
@@ -67,7 +72,8 @@ class _KeyboardViewState extends State<KeyboardView> {
 class _CharRow extends StatelessWidget {
   const _CharRow({
     required this.row,
-    required this.shift,
+    required this.big,
+    required this.effShift,
     required this.withMods,
     required this.onShift,
     required this.onBackspace,
@@ -75,7 +81,8 @@ class _CharRow extends StatelessWidget {
   });
 
   final KbRow row;
-  final bool shift;
+  final bool big;
+  final bool effShift;
   final bool withMods;
   final VoidCallback onShift;
   final VoidCallback onBackspace;
@@ -90,13 +97,17 @@ class _CharRow extends StatelessWidget {
           if (withMods)
             _ModKey(
               flex: 14,
-              active: shift,
+              active: effShift,
+              enabled: !big,
               onTap: onShift,
               child: const Icon(Icons.arrow_upward_rounded, size: 24),
             ),
           for (final k in row.keys)
             _CharKey(
-              label: shift && _hasCase(k) ? k.toUpperCase() : k,
+              // Display-only uppercasing; the inserted value keeps stored
+              // casing (lowercase unless shift is genuinely active).
+              label: (big || (effShift && _hasCase(k))) ? k.toUpperCase() : k,
+              value: effShift && _hasCase(k) ? k.toUpperCase() : k,
               onTap: onChar,
             ),
           if (withMods)
@@ -114,8 +125,13 @@ class _CharRow extends StatelessWidget {
 }
 
 class _CharKey extends StatelessWidget {
-  const _CharKey({required this.label, required this.onTap});
+  const _CharKey({required this.label, required this.value, required this.onTap});
+
+  /// What the child sees on the keycap (may be display-uppercased).
   final String label;
+
+  /// What actually gets inserted — always the stored casing.
+  final String value;
   final void Function(String) onTap;
 
   @override
@@ -130,7 +146,7 @@ class _CharKey extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppTokens.rKey),
           child: InkWell(
             borderRadius: BorderRadius.circular(AppTokens.rKey),
-            onTap: () => onTap(label),
+            onTap: () => onTap(value),
             child: Container(
               alignment: Alignment.center,
               decoration: BoxDecoration(
@@ -159,6 +175,7 @@ class _ModKey extends StatelessWidget {
     required this.onTap,
     required this.child,
     this.active = false,
+    this.enabled = true,
   });
 
   final int flex;
@@ -166,36 +183,40 @@ class _ModKey extends StatelessWidget {
   final Widget child;
   final bool active;
 
+  /// When false the key is rendered inert: dimmed, no tap/ripple/hover,
+  /// and never shown as active.
+  final bool enabled;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return Expanded(
-      flex: flex,
-      child: Padding(
-        padding: const EdgeInsets.all(3),
-        child: Material(
-          color: active ? colors.primarySoft : colors.keyMod,
-          borderRadius: BorderRadius.circular(AppTokens.rKey),
-          child: InkWell(
+    final isActive = active && enabled;
+    Widget key = Material(
+      color: isActive ? colors.primarySoft : colors.keyMod,
+      borderRadius: BorderRadius.circular(AppTokens.rKey),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppTokens.rKey),
+        onTap: enabled ? onTap : null,
+        child: Container(
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppTokens.rKey),
-            onTap: onTap,
-            child: Container(
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppTokens.rKey),
-                border: Border.all(
-                  color: active ? colors.primary : colors.keyBorder,
-                  width: 1.5,
-                ),
-              ),
-              child: IconTheme(
-                data: IconThemeData(color: active ? colors.primary : colors.ink2),
-                child: child,
-              ),
+            border: Border.all(
+              color: isActive ? colors.primary : colors.keyBorder,
+              width: 1.5,
             ),
+          ),
+          child: IconTheme(
+            data: IconThemeData(color: isActive ? colors.primary : colors.ink2),
+            child: child,
           ),
         ),
       ),
+    );
+    if (!enabled) key = Opacity(opacity: 0.35, child: key);
+    return Expanded(
+      flex: flex,
+      child: Padding(padding: const EdgeInsets.all(3), child: key),
     );
   }
 }
@@ -209,7 +230,7 @@ class _SpaceRow extends StatelessWidget {
     final colors = context.colors;
     final l10n = AppLocalizations.of(context)!;
 
-    Widget punct(String c) => _CharKey(label: c, onTap: onChar);
+    Widget punct(String c) => _CharKey(label: c, value: c, onTap: onChar);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppTokens.s4),

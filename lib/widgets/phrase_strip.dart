@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../core/text_display.dart';
 import '../core/theme.dart';
 import '../l10n/app_localizations.dart';
 import '../state/composer_controller.dart';
@@ -20,6 +21,7 @@ class PhraseStrip extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final lang = context.watch<LanguageController>().language;
     final phrases = context.watch<PhrasesController>().phrasesFor(lang);
+    final big = context.watch<SettingsController>().bigLetters;
 
     return SizedBox(
       height: 56,
@@ -52,7 +54,8 @@ class PhraseStrip extends StatelessWidget {
                 final p = phrases[i];
                 return Center(
                   child: _Chip(
-                    label: p.text,
+                    // Display-only; loadText below keeps stored casing.
+                    label: p.text.displayUpper(big),
                     pinned: p.pinned,
                     onTap: () {
                       if (context.read<SettingsController>().haptics) {

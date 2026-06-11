@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/text_display.dart';
 import '../core/theme.dart';
 
 /// Renders the composed message as tactile word tiles (IMPLEMENTATION_PLAN
@@ -14,12 +15,16 @@ class MessageBlocks extends StatefulWidget {
     required this.activeIndex,
     required this.placeholder,
     required this.onRemove,
+    required this.bigLetters,
   });
 
   final List<String> tokens;
   final int activeIndex;
   final String placeholder;
   final void Function(int index) onRemove;
+
+  /// Display-only uppercasing (Big letters mode); tokens keep stored casing.
+  final bool bigLetters;
 
   /// Locked line-height multiplier + size so every tile has a deterministic
   /// height, letting [MessageBar] size its visible area to whole rows.
@@ -59,7 +64,7 @@ class _MessageBlocksState extends State<MessageBlocks> {
 
     if (widget.tokens.isEmpty) {
       return Text(
-        widget.placeholder,
+        widget.placeholder.displayUpper(widget.bigLetters),
         style: TextStyle(
           color: colors.ink3,
           fontSize: 26,
@@ -112,7 +117,7 @@ class _MessageBlocksState extends State<MessageBlocks> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              word,
+              word.displayUpper(widget.bigLetters),
               style: TextStyle(
                 color: colors.ink,
                 fontSize: MessageBlocks.tileFontSize,
