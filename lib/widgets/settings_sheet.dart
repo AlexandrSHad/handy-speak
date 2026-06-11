@@ -256,6 +256,12 @@ class _AccessibilitySection extends StatelessWidget {
       children: [
         _SectionTitle(l10n.settingsAccessibility),
         _ToggleRow(
+          name: l10n.settingsBigLettersName,
+          desc: l10n.settingsBigLettersDesc,
+          value: settings.bigLetters,
+          onChanged: (v) => context.read<SettingsController>().setBigLetters(v),
+        ),
+        _ToggleRow(
           name: l10n.settingsHapticName,
           desc: l10n.settingsHapticDesc,
           value: settings.haptics,
@@ -342,6 +348,7 @@ class _PhrasesSectionState extends State<_PhrasesSection> {
     final l10n = AppLocalizations.of(context)!;
     final lang = context.watch<LanguageController>().language;
     final phrasesCtrl = context.watch<PhrasesController>();
+    final settings = context.watch<SettingsController>();
     final phrases = phrasesCtrl.phrasesFor(lang);
 
     void add() {
@@ -353,6 +360,33 @@ class _PhrasesSectionState extends State<_PhrasesSection> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionTitle(l10n.settingsPhrases),
+        _ToggleRow(
+          name: l10n.settingsShowPhrasesName,
+          desc: l10n.settingsShowPhrasesDesc,
+          value: settings.showPhrases,
+          onChanged: (v) =>
+              context.read<SettingsController>().setShowPhrases(v),
+        ),
+        if (!settings.showPhrases)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppTokens.s8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.visibility_off_outlined,
+                    size: 16, color: colors.ink3),
+                const SizedBox(width: AppTokens.s8),
+                Expanded(
+                  child: Text(
+                    l10n.settingsPhrasesHiddenNote,
+                    style: TextStyle(
+                        color: colors.ink3, fontSize: 13, height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        const SizedBox(height: AppTokens.s8),
         for (final p in phrases)
           Padding(
             padding: const EdgeInsets.only(bottom: AppTokens.s8),
