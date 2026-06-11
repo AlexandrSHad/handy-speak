@@ -32,5 +32,10 @@
   "settingsHapticDesc": "Vibrate on key/card press (where supported).",
   "settingsDarkName": "Dark mode",
   "settingsDarkDesc": "Lower-contrast surfaces for low-light use.",
+  "settingsBigLettersName": "Big letters",
+  "settingsBigLettersDesc": "Show every letter as a capital and lock the shift key. Helps kids who don't read lowercase yet — speech is unchanged.",
+  "settingsShowPhrasesName": "Show phrase shortcuts",
+  "settingsShowPhrasesDesc": "The quick-phrase strip above the keyboard. Turn off for kids who don't read yet — keys and symbols grow bigger.",
+  "settingsPhrasesHiddenNote": "Hidden on the board — phrases stay saved here and come back when you switch this on.",
   "voiceMissing": "No Czech voice on this tablet yet — add one in your device's speech settings for the best pronunciation."
 }

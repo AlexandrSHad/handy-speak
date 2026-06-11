@@ -260,6 +260,36 @@ abstract class AppLocalizations {
   /// **'Lower-contrast surfaces for low-light use.'**
   String get settingsDarkDesc;
 
+  /// No description provided for @settingsBigLettersName.
+  ///
+  /// In en, this message translates to:
+  /// **'Big letters'**
+  String get settingsBigLettersName;
+
+  /// No description provided for @settingsBigLettersDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Show every letter as a capital and lock the shift key. Helps kids who don\'t read lowercase yet — speech is unchanged.'**
+  String get settingsBigLettersDesc;
+
+  /// No description provided for @settingsShowPhrasesName.
+  ///
+  /// In en, this message translates to:
+  /// **'Show phrase shortcuts'**
+  String get settingsShowPhrasesName;
+
+  /// No description provided for @settingsShowPhrasesDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'The quick-phrase strip above the keyboard. Turn off for kids who don\'t read yet — keys and symbols grow bigger.'**
+  String get settingsShowPhrasesDesc;
+
+  /// No description provided for @settingsPhrasesHiddenNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden on the board — phrases stay saved here and come back when you switch this on.'**
+  String get settingsPhrasesHiddenNote;
+
   /// No description provided for @voiceMissing.
   ///
   /// In en, this message translates to:

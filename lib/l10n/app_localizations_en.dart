@@ -102,6 +102,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsDarkDesc => 'Lower-contrast surfaces for low-light use.';
 
   @override
+  String get settingsBigLettersName => 'Big letters';
+
+  @override
+  String get settingsBigLettersDesc =>
+      'Show every letter as a capital and lock the shift key. Helps kids who don\'t read lowercase yet — speech is unchanged.';
+
+  @override
+  String get settingsShowPhrasesName => 'Show phrase shortcuts';
+
+  @override
+  String get settingsShowPhrasesDesc =>
+      'The quick-phrase strip above the keyboard. Turn off for kids who don\'t read yet — keys and symbols grow bigger.';
+
+  @override
+  String get settingsPhrasesHiddenNote =>
+      'Hidden on the board — phrases stay saved here and come back when you switch this on.';
+
+  @override
   String get voiceMissing =>
       'No Czech voice on this tablet yet — add one in your device\'s speech settings for the best pronunciation.';
 }

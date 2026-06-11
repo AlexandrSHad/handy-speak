@@ -1,7 +1,7 @@
 name: handy_speak
 description: "HandySpeak — a bilingual AAC tablet app for children (POC)."
 publish_to: "none"
-version: 0.1.0+1
+version: 0.2.0+1
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -18,8 +18,15 @@ dependencies:
   intl: any
 
 dev_dependencies:
+#  flutter_launcher_icons: ^0.14.1
   flutter_lints: ^4.0.0
 
 flutter:
   generate: true
   uses-material-design: true
+
+#flutter_icons:
+#  android: true
+#  ios: true
+#  web: true
+#  image_path:

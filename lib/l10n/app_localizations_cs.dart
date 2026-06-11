@@ -103,6 +103,24 @@ class AppLocalizationsCs extends AppLocalizations {
   String get settingsDarkDesc => 'Méně kontrastní plochy pro použití v šeru.';
 
   @override
+  String get settingsBigLettersName => 'Velká písmena';
+
+  @override
+  String get settingsBigLettersDesc =>
+      'Všechna písmena se zobrazí jako velká a klávesa shift se uzamkne. Pomáhá dětem, které ještě nečtou malá písmena — řeč se nemění.';
+
+  @override
+  String get settingsShowPhrasesName => 'Zobrazit lištu frází';
+
+  @override
+  String get settingsShowPhrasesDesc =>
+      'Lišta rychlých frází nad klávesnicí. Vypni pro děti, které ještě nečtou — klávesy a symboly se zvětší.';
+
+  @override
+  String get settingsPhrasesHiddenNote =>
+      'Na tabulce skryto — fráze tu zůstávají uložené a vrátí se po zapnutí.';
+
+  @override
   String get voiceMissing =>
       'V tabletu zatím není český hlas — přidej ho v nastavení řeči zařízení pro nejlepší výslovnost.';
 }
