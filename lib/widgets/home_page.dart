@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../core/theme.dart';
 import '../state/composer_controller.dart';
+import '../state/settings_controller.dart';
 import 'keyboard_view.dart';
 import 'message_bar.dart';
 import 'phrase_strip.dart';
@@ -19,6 +20,8 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mode = context.select<ComposerController, InputMode>((c) => c.mode);
+    final showPhrases =
+        context.select<SettingsController, bool>((s) => s.showPhrases);
 
     return Scaffold(
       body: SafeArea(
@@ -30,8 +33,10 @@ class HomePage extends StatelessWidget {
               const SizedBox(height: AppTokens.s16),
               const MessageBar(),
               const SizedBox(height: AppTokens.s12),
-              const PhraseStrip(),
-              const SizedBox(height: AppTokens.s12),
+              if (showPhrases) ...[
+                const PhraseStrip(),
+                const SizedBox(height: AppTokens.s12),
+              ],
               Expanded(
                 child: mode == InputMode.keyboard
                     ? const KeyboardView()

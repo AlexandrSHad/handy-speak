@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../core/app_language.dart';
+import '../core/text_display.dart';
 import '../core/theme.dart';
 import '../data/categories.dart';
 import '../data/pictograms.dart';
@@ -40,19 +41,29 @@ class _SymbolBoardState extends State<SymbolBoard> {
         const SizedBox(width: AppTokens.s12),
         Expanded(
           child: LayoutBuilder(
-            builder: (context, constraints) {
-              final cols = (constraints.maxWidth / 150).floor().clamp(3, 8);
+            builder: (context, c) {
+              const spacing = AppTokens.s12;
+              final cols = (c.maxWidth / 150).floor().clamp(3, 8);
+              final tileW = (c.maxWidth - (cols - 1) * spacing) / cols;
+              final rowsVisible = ((c.maxHeight + spacing) / (tileW + spacing))
+                  .floor()
+                  .clamp(2, 6);
+              final tileH =
+                  ((c.maxHeight - (rowsVisible - 1) * spacing) / rowsVisible)
+                      .clamp(tileW, tileW * 1.45)
+                      .toDouble();
               return GridView.builder(
                 padding: const EdgeInsets.only(right: 2, bottom: 2),
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: cols,
-                  mainAxisSpacing: AppTokens.s12,
-                  crossAxisSpacing: AppTokens.s12,
-                  childAspectRatio: 1,
+                  mainAxisSpacing: spacing,
+                  crossAxisSpacing: spacing,
+                  mainAxisExtent: tileH,
                 ),
                 itemCount: pics.length,
                 itemBuilder: (context, i) => _PictogramTile(
                   pictogram: pics[i],
+                  tileHeight: tileH,
                   lang: lang,
                   color: category.color,
                   onTap: () {
@@ -87,6 +98,7 @@ class _CategoryRail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final big = context.select<SettingsController, bool>((s) => s.bigLetters);
     return ListView.separated(
       itemCount: kCategories.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppTokens.s8),
@@ -117,7 +129,7 @@ class _CategoryRail extends StatelessWidget {
                   const SizedBox(width: AppTokens.s8),
                   Expanded(
                     child: Text(
-                      c.label(lang),
+                      c.label(lang).displayUpper(big),
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: colors.ink,
@@ -139,12 +151,14 @@ class _CategoryRail extends StatelessWidget {
 class _PictogramTile extends StatelessWidget {
   const _PictogramTile({
     required this.pictogram,
+    required this.tileHeight,
     required this.lang,
     required this.color,
     required this.onTap,
   });
 
   final Pictogram pictogram;
+  final double tileHeight;
   final AppLanguage lang;
   final Color color;
   final VoidCallback onTap;
@@ -152,6 +166,9 @@ class _PictogramTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final big = context.select<SettingsController, bool>((s) => s.bigLetters);
+    final emojiSize = (tileHeight * 0.30).clamp(40.0, 64.0).toDouble();
+    final labelSize = (tileHeight * 0.11).clamp(16.0, 22.0).toDouble();
     return Material(
       color: colors.surface,
       borderRadius: BorderRadius.circular(AppTokens.rCard),
@@ -166,18 +183,18 @@ class _PictogramTile extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(pictogram.emoji, style: const TextStyle(fontSize: 40)),
+              Text(pictogram.emoji, style: TextStyle(fontSize: emojiSize)),
               const SizedBox(height: AppTokens.s8),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6),
                 child: Text(
-                  pictogram.word(lang),
+                  pictogram.word(lang).displayUpper(big),
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: colors.ink,
-                    fontSize: 16,
+                    fontSize: labelSize,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
