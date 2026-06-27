@@ -24,12 +24,27 @@ dev_dependencies:
     sdk: flutter
   flutter_launcher_icons: ^0.14.1
   flutter_lints: ^4.0.0
+  flutter_native_splash: ^2.4.6
 
 flutter:
   generate: true
   uses-material-design: true
   assets:
     - assets/icon/app_icon.png
+
+# Native launch screen (shown by the OS while the Flutter engine warms up).
+# Generated into android/ios/web with: dart run flutter_native_splash:create
+# Brand green background + the white sun glyph (the icon's transparent foreground).
+flutter_native_splash:
+  color: "#1fa567"
+  image: assets/icon/foreground.png
+  android: true
+  ios: true
+  web: false
+  # Android 12+ uses the system splash API: icon centered on the brand color.
+  android_12:
+    image: assets/icon/foreground.png
+    icon_background_color: "#1fa567"
 
 flutter_launcher_icons:
   image_path: "assets/icon/app_icon.png"
