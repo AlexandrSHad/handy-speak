@@ -49,14 +49,14 @@ class _Brand extends StatelessWidget {
     final colors = context.colors;
     return Row(
       children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [colors.primary, colors.accent]),
-            borderRadius: BorderRadius.circular(12),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.asset(
+            'assets/icon/app_icon.png',
+            width: 40,
+            height: 40,
+            fit: BoxFit.cover,
           ),
-          child: const Icon(Icons.graphic_eq, color: Colors.white, size: 22),
         ),
         const SizedBox(width: AppTokens.s12),
         Text(

@@ -22,15 +22,23 @@ dev_dependencies:
     sdk: flutter
   integration_test:
     sdk: flutter
-#  flutter_launcher_icons: ^0.14.1
+  flutter_launcher_icons: ^0.14.1
   flutter_lints: ^4.0.0
 
 flutter:
   generate: true
   uses-material-design: true
+  assets:
+    - assets/icon/app_icon.png
 
-#flutter_icons:
-#  android: true
-#  ios: true
-#  web: true
-#  image_path:
+flutter_launcher_icons:
+  image_path: "assets/icon/app_icon.png"
+  android: true
+  min_sdk_android: 21
+  adaptive_icon_background: "assets/icon/background.png"
+  adaptive_icon_foreground: "assets/icon/foreground.png"
+  web:
+    generate: true
+    image_path: "assets/icon/app_icon.png"
+    background_color: "#1fa567"
+    theme_color: "#1fa567"
