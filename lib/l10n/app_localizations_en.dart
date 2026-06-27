@@ -122,4 +122,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get voiceMissing =>
       'No Czech voice on this tablet yet — add one in your device\'s speech settings for the best pronunciation.';
+
+  @override
+  String get preparingVoice => 'Preparing voice…';
+
+  @override
+  String get voiceUnavailable => 'Voice unavailable';
+
+  @override
+  String get voiceUnavailableDetail =>
+      'This tablet can\'t reach a speaking voice, so the app can\'t talk yet. Open your device\'s speech (text-to-speech) settings to set one up.';
 }

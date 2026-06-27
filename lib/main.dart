@@ -25,8 +25,11 @@ Future<void> main() async {
   final storage = StorageService();
   await storage.init();
 
+  // TTS binds in the background (constructor); we deliberately do NOT await it
+  // so the first frame paints immediately instead of sitting on a white screen
+  // while the Android TTS service binds. The Speak button shows a spinner until
+  // SpeechService.status flips to ready (or an error if it never binds).
   final speech = SpeechService();
-  await speech.init();
 
   final settings = SettingsController(storage)..load();
   final phrases = PhrasesController(storage)..load();

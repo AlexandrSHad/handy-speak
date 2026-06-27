@@ -295,6 +295,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No Czech voice on this tablet yet — add one in your device\'s speech settings for the best pronunciation.'**
   String get voiceMissing;
+
+  /// No description provided for @preparingVoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing voice…'**
+  String get preparingVoice;
+
+  /// No description provided for @voiceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice unavailable'**
+  String get voiceUnavailable;
+
+  /// No description provided for @voiceUnavailableDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'This tablet can\'t reach a speaking voice, so the app can\'t talk yet. Open your device\'s speech (text-to-speech) settings to set one up.'**
+  String get voiceUnavailableDetail;
 }
 
 class _AppLocalizationsDelegate

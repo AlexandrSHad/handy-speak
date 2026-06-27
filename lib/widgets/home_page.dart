@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/theme.dart';
+import '../l10n/app_localizations.dart';
+import '../services/speech_service.dart';
 import '../state/composer_controller.dart';
 import '../state/settings_controller.dart';
 import 'keyboard_view.dart';
 import 'message_bar.dart';
+import 'notice_banner.dart';
 import 'phrase_strip.dart';
 import 'settings_sheet.dart';
 import 'symbol_board.dart';
@@ -33,6 +36,16 @@ class HomePage extends StatelessWidget {
               const SizedBox(height: AppTokens.s16),
               const MessageBar(),
               const SizedBox(height: AppTokens.s12),
+              // Hard failure: the engine never bound. Tell the parent why the
+              // app can't speak and where to fix it.
+              if (context.select<SpeechService, bool>(
+                  (s) => s.status == SpeechStatus.unavailable)) ...[
+                NoticeBanner(
+                  text: AppLocalizations.of(context)!.voiceUnavailableDetail,
+                  kind: NoticeKind.error,
+                ),
+                const SizedBox(height: AppTokens.s12),
+              ],
               if (showPhrases) ...[
                 const PhraseStrip(),
                 const SizedBox(height: AppTokens.s12),

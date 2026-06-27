@@ -8,6 +8,7 @@ import '../services/speech_service.dart';
 import '../state/language_controller.dart';
 import '../state/phrases_controller.dart';
 import '../state/settings_controller.dart';
+import 'notice_banner.dart';
 
 /// Settings sheet (IMPLEMENTATION_PLAN Task 8): language selector, the
 /// **disabled** Mood voices row (§2), dark/haptic toggles, per-language phrase
@@ -185,38 +186,8 @@ class _LanguageSection extends StatelessWidget {
             ),
           ),
         if (lang == AppLanguage.cs && !speech.csAvailable)
-          _VoiceWarning(text: l10n.voiceMissing),
+          NoticeBanner(text: l10n.voiceMissing),
       ],
-    );
-  }
-}
-
-class _VoiceWarning extends StatelessWidget {
-  const _VoiceWarning({required this.text});
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Container(
-      margin: const EdgeInsets.only(top: AppTokens.s8),
-      padding: const EdgeInsets.all(AppTokens.s12),
-      decoration: BoxDecoration(
-        color: colors.accentSoft,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: colors.accent.withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.volume_off_outlined, size: 20, color: colors.ink2),
-          const SizedBox(width: AppTokens.s8),
-          Expanded(
-            child: Text(text,
-                style: TextStyle(color: colors.ink2, fontSize: 14, height: 1.4)),
-          ),
-        ],
-      ),
     );
   }
 }

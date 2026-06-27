@@ -37,5 +37,8 @@
   "settingsShowPhrasesName": "Show phrase shortcuts",
   "settingsShowPhrasesDesc": "The quick-phrase strip above the keyboard. Turn off for kids who don't read yet — keys and symbols grow bigger.",
   "settingsPhrasesHiddenNote": "Hidden on the board — phrases stay saved here and come back when you switch this on.",
-  "voiceMissing": "No Czech voice on this tablet yet — add one in your device's speech settings for the best pronunciation."
+  "voiceMissing": "No Czech voice on this tablet yet — add one in your device's speech settings for the best pronunciation.",
+  "preparingVoice": "Preparing voice…",
+  "voiceUnavailable": "Voice unavailable",
+  "voiceUnavailableDetail": "This tablet can't reach a speaking voice, so the app can't talk yet. Open your device's speech (text-to-speech) settings to set one up."
 }
