@@ -9,6 +9,7 @@ import '../l10n/app_localizations.dart';
 import '../state/composer_controller.dart';
 import '../state/language_controller.dart';
 import '../state/settings_controller.dart';
+import 'forgiving_tap.dart';
 
 /// On-screen keyboard (IMPLEMENTATION_PLAN Task 5). Layout swaps with the
 /// active language (EN QWERTY / CS QWERTZ-with-diacritics). Keys flex to fill
@@ -144,7 +145,7 @@ class _CharKey extends StatelessWidget {
         child: Material(
           color: colors.keyBg,
           borderRadius: BorderRadius.circular(AppTokens.rKey),
-          child: InkWell(
+          child: ForgivingTap(
             borderRadius: BorderRadius.circular(AppTokens.rKey),
             onTap: () => onTap(value),
             child: Container(
@@ -194,8 +195,10 @@ class _ModKey extends StatelessWidget {
     Widget key = Material(
       color: isActive ? colors.primarySoft : colors.keyMod,
       borderRadius: BorderRadius.circular(AppTokens.rKey),
-      child: InkWell(
+      child: ForgivingTap(
         borderRadius: BorderRadius.circular(AppTokens.rKey),
+        // Null passthrough keeps the inert-shift contract: the inner
+        // InkWell.onTap stays null, which ADDENDUM-01 tests assert.
         onTap: enabled ? onTap : null,
         child: Container(
           alignment: Alignment.center,
@@ -244,7 +247,7 @@ class _SpaceRow extends StatelessWidget {
               child: Material(
                 color: colors.keyBg,
                 borderRadius: BorderRadius.circular(AppTokens.rKey),
-                child: InkWell(
+                child: ForgivingTap(
                   borderRadius: BorderRadius.circular(AppTokens.rKey),
                   onTap: () => onChar(' '),
                   child: Container(
