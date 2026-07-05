@@ -8,7 +8,8 @@ import 'composer_controller.dart';
 /// Owns the active [AppLanguage] and is the single switch that flips
 /// everything (IMPLEMENTATION_PLAN Task 2 / §6.1.1). Changing it:
 ///   1. cancels any in-progress speech,
-///   2. clears the composed message (free text can't be auto-translated),
+///   2. clears the composed **sentence** (free text can't be auto-translated;
+///      the math problem is glyphs and survives),
 ///   3. points the TTS engine at the new locale,
 ///   4. flips the app `Locale`, keyboard, symbols and phrase set via notify.
 class LanguageController extends ChangeNotifier {
@@ -34,9 +35,9 @@ class LanguageController extends ChangeNotifier {
     _language = next;
     _storage.setString(_kLang, next.key);
 
-    // §6.1.1 — cancel speech, clear the message, then flip the voice.
+    // §6.1.1 — cancel speech, clear the sentence (math survives), flip voice.
     _speech.stop();
-    _composer.clear();
+    _composer.clearSentence();
     _speech.setLanguage(next.ttsLocale);
 
     notifyListeners();

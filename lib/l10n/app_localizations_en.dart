@@ -18,6 +18,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get modeSymbols => 'Symbols';
 
   @override
+  String get modeMath => 'Math';
+
+  @override
   String get settings => 'Settings';
 
   @override
@@ -37,6 +40,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get keySpace => 'space';
+
+  @override
+  String get keyBackspace => 'Delete';
 
   @override
   String wordCount(int count) {

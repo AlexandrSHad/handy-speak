@@ -50,6 +50,10 @@ verify — grounded in what's actually testable in the current dev
 environment (e.g. web/Chrome only if no Android SDK is available locally).
 Include both languages (EN/CS) explicitly wherever text or input is
 involved, and confirm persistence/settings behavior where relevant.
+Split this section in the following categoreis:
+ - Unit tests
+ - Integration tests
+ - Manual checks (avoid manual checks if possible)
 
 ## Critical files
 

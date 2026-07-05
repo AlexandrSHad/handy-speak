@@ -128,6 +128,7 @@ class _ModeToggle extends StatelessWidget {
         children: [
           seg(InputMode.keyboard, Icons.keyboard_outlined, l10n.modeKeyboard),
           seg(InputMode.symbols, Icons.grid_view_rounded, l10n.modeSymbols),
+          seg(InputMode.math, Icons.calculate_outlined, l10n.modeMath),
         ],
       ),
     );

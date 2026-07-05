@@ -116,6 +116,12 @@ abstract class AppLocalizations {
   /// **'Symbols'**
   String get modeSymbols;
 
+  /// No description provided for @modeMath.
+  ///
+  /// In en, this message translates to:
+  /// **'Math'**
+  String get modeMath;
+
   /// No description provided for @settings.
   ///
   /// In en, this message translates to:
@@ -157,6 +163,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'space'**
   String get keySpace;
+
+  /// No description provided for @keyBackspace.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get keyBackspace;
 
   /// No description provided for @wordCount.
   ///

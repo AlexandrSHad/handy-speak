@@ -15,6 +15,11 @@ import 'forgiving_tap.dart';
 /// active language (EN QWERTY / CS QWERTZ-with-diacritics). Keys flex to fill
 /// the row so the 15-key Czech accent row and 10-key letter rows both fit
 /// without overflow (§6.1.3). No prediction row (cut, §3).
+///
+/// ADDENDUM-02 (Czech inline numbers): Czech has no permanent digit row, so a
+/// `123`/`ABC` toggle in the bottom row swaps the diacritics row in place for
+/// `0–9` (teal-tinted to signal number mode). English already has a digit row
+/// and gets no toggle.
 class KeyboardView extends StatefulWidget {
   const KeyboardView({super.key});
 
@@ -24,6 +29,34 @@ class KeyboardView extends StatefulWidget {
 
 class _KeyboardViewState extends State<KeyboardView> {
   bool _shift = false;
+
+  /// Czech-only inline-numbers toggle (ADDENDUM-02): swaps the diacritics row
+  /// for `0–9` in place. Reset on every language change so a stale-open state
+  /// never surprises on switching back to Czech.
+  bool _numOpen = false;
+
+  LanguageController? _language;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final lang = context.read<LanguageController>();
+    if (_language != lang) {
+      _language?.removeListener(_onLanguageChanged);
+      _language = lang;
+      _language!.addListener(_onLanguageChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    _language?.removeListener(_onLanguageChanged);
+    super.dispose();
+  }
+
+  void _onLanguageChanged() {
+    if (mounted && _numOpen) setState(() => _numOpen = false);
+  }
 
   void _haptic() {
     if (context.read<SettingsController>().haptics) {
@@ -41,8 +74,10 @@ class _KeyboardViewState extends State<KeyboardView> {
   Widget build(BuildContext context) {
     final lang = context.watch<LanguageController>().language;
     final rows = kKeyboardLayouts[lang] ?? kKeyboardLayouts[AppLanguage.en]!;
+    final hasNumRow = rows.any((r) => r.type == KbRowType.number);
     final lastLetterRow = rows.length - 1;
     final big = context.watch<SettingsController>().bigLetters;
+    final colors = context.colors;
     // Big letters mode: shift is treated as OFF (and rendered inert) without
     // resetting the underlying _shift state (POC parity).
     final effShift = _shift && !big;
@@ -52,7 +87,9 @@ class _KeyboardViewState extends State<KeyboardView> {
         for (int ri = 0; ri < rows.length; ri++)
           Expanded(
             child: _CharRow(
-              row: rows[ri],
+              row: _resolveRow(rows[ri]),
+              tintBg: _isSwapped(rows[ri]) ? colors.opSoft : null,
+              tintInk: _isSwapped(rows[ri]) ? colors.opInk : null,
               big: big,
               effShift: effShift,
               withMods: ri == lastLetterRow,
@@ -64,11 +101,30 @@ class _KeyboardViewState extends State<KeyboardView> {
               onChar: _tapChar,
             ),
           ),
-        Expanded(child: _SpaceRow(onChar: _tapChar)),
+        Expanded(
+          child: _SpaceRow(
+            onChar: _tapChar,
+            showNumToggle: !hasNumRow,
+            numOpen: _numOpen,
+            onToggleNum: () => setState(() => _numOpen = !_numOpen),
+          ),
+        ),
       ],
     );
   }
+
+  /// True when [row] is the Czech diacritics row and the digit layer is open.
+  bool _isSwapped(KbRow row) => row.type == KbRowType.accent && _numOpen;
+
+  /// The row to actually render: the digit strip when swapped, else [row].
+  KbRow _resolveRow(KbRow row) =>
+      _isSwapped(row) ? const KbRow(_kDigits, KbRowType.number) : row;
 }
+
+/// Digits revealed by the Czech `123` toggle (POC `.num-strip`). 10 keys vs
+/// the 15-key diacritics row — each `Expanded`, so they widen in place with
+/// no motion or overlay.
+const _kDigits = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
 
 class _CharRow extends StatelessWidget {
   const _CharRow({
@@ -79,6 +135,8 @@ class _CharRow extends StatelessWidget {
     required this.onShift,
     required this.onBackspace,
     required this.onChar,
+    this.tintBg,
+    this.tintInk,
   });
 
   final KbRow row;
@@ -88,6 +146,11 @@ class _CharRow extends StatelessWidget {
   final VoidCallback onShift;
   final VoidCallback onBackspace;
   final void Function(String) onChar;
+
+  /// Optional teal tint for the swapped Czech digit row (ADDENDUM-02). Null
+  /// for every other row → default key colors.
+  final Color? tintBg;
+  final Color? tintInk;
 
   @override
   Widget build(BuildContext context) {
@@ -110,6 +173,8 @@ class _CharRow extends StatelessWidget {
               label: (big || (effShift && _hasCase(k))) ? k.toUpperCase() : k,
               value: effShift && _hasCase(k) ? k.toUpperCase() : k,
               onTap: onChar,
+              tintBg: tintBg,
+              tintInk: tintInk,
             ),
           if (withMods)
             _ModKey(
@@ -126,7 +191,13 @@ class _CharRow extends StatelessWidget {
 }
 
 class _CharKey extends StatelessWidget {
-  const _CharKey({required this.label, required this.value, required this.onTap});
+  const _CharKey({
+    required this.label,
+    required this.value,
+    required this.onTap,
+    this.tintBg,
+    this.tintInk,
+  });
 
   /// What the child sees on the keycap (may be display-uppercased).
   final String label;
@@ -135,15 +206,21 @@ class _CharKey extends StatelessWidget {
   final String value;
   final void Function(String) onTap;
 
+  /// Optional tint (swapped Czech digit row only). Null → default colors.
+  final Color? tintBg;
+  final Color? tintInk;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final bg = tintBg ?? colors.keyBg;
+    final fg = tintInk ?? colors.ink;
     return Expanded(
       flex: 10,
       child: Padding(
         padding: const EdgeInsets.all(3),
         child: Material(
-          color: colors.keyBg,
+          color: bg,
           borderRadius: BorderRadius.circular(AppTokens.rKey),
           child: ForgivingTap(
             borderRadius: BorderRadius.circular(AppTokens.rKey),
@@ -157,7 +234,7 @@ class _CharKey extends StatelessWidget {
               child: Text(
                 label,
                 style: TextStyle(
-                  color: colors.ink,
+                  color: fg,
                   fontSize: 24,
                   fontWeight: FontWeight.w600,
                 ),
@@ -225,8 +302,23 @@ class _ModKey extends StatelessWidget {
 }
 
 class _SpaceRow extends StatelessWidget {
-  const _SpaceRow({required this.onChar});
+  const _SpaceRow({
+    required this.onChar,
+    this.showNumToggle = false,
+    this.numOpen = false,
+    this.onToggleNum,
+  });
+
   final void Function(String) onChar;
+
+  /// Show the `123`/`ABC` toggle (only when the layout has no digit row,
+  /// i.e. Czech — ADDENDUM-02).
+  final bool showNumToggle;
+
+  /// Whether the inline digit layer is open (drives the `123`/`ABC` label).
+  final bool numOpen;
+
+  final VoidCallback? onToggleNum;
 
   @override
   Widget build(BuildContext context) {
@@ -239,6 +331,8 @@ class _SpaceRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: AppTokens.s4),
       child: Row(
         children: [
+          if (showNumToggle)
+            _NumToggleKey(active: numOpen, onTap: onToggleNum!),
           punct(','),
           Expanded(
             flex: 60,
@@ -273,6 +367,52 @@ class _SpaceRow extends StatelessWidget {
           punct('!'),
           punct('?'),
         ],
+      ),
+    );
+  }
+}
+
+/// `123`/`ABC` toggle that swaps the Czech diacritics row for digits
+/// (ADDENDUM-02). Styled like `_ModKey` (`keyMod` bg, pressed state when
+/// open). Labels are literal glyphs — never localized.
+class _NumToggleKey extends StatelessWidget {
+  const _NumToggleKey({required this.active, required this.onTap});
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Expanded(
+      flex: 14,
+      child: Padding(
+        padding: const EdgeInsets.all(3),
+        child: Material(
+          color: active ? colors.primarySoft : colors.keyMod,
+          borderRadius: BorderRadius.circular(AppTokens.rKey),
+          child: ForgivingTap(
+            borderRadius: BorderRadius.circular(AppTokens.rKey),
+            onTap: onTap,
+            child: Container(
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppTokens.rKey),
+                border: Border.all(
+                  color: active ? colors.primary : colors.keyBorder,
+                  width: 1.5,
+                ),
+              ),
+              child: Text(
+                active ? 'ABC' : '123',
+                style: TextStyle(
+                  color: active ? colors.primary : colors.ink2,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

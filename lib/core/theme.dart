@@ -22,6 +22,10 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.primarySoft,
     required this.accent,
     required this.accentSoft,
+    required this.opSoft,
+    required this.opInk,
+    required this.relSoft,
+    required this.relInk,
     required this.keyBg,
     required this.keyBorder,
     required this.keyMod,
@@ -42,6 +46,10 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color primarySoft;
   final Color accent;
   final Color accentSoft;
+  final Color opSoft;
+  final Color opInk;
+  final Color relSoft;
+  final Color relInk;
   final Color keyBg;
   final Color keyBorder;
   final Color keyMod;
@@ -62,6 +70,10 @@ class AppColors extends ThemeExtension<AppColors> {
     primarySoft: Color(0xFFE3F2E9),
     accent: Color(0xFF4E9FD4),
     accentSoft: Color(0xFFE6EFF6),
+    opSoft: Color(0xFFC4F3EA),
+    opInk: Color(0xFF006962),
+    relSoft: Color(0xFFF5E8FF),
+    relInk: Color(0xFF764AA2),
     keyBg: Color(0xFFFFFFFF),
     keyBorder: Color(0xFFDAD6CF),
     keyMod: Color(0xFFEDEAE4),
@@ -83,6 +95,10 @@ class AppColors extends ThemeExtension<AppColors> {
     primarySoft: Color(0xFF1E3A2C),
     accent: Color(0xFF69AFDC),
     accentSoft: Color(0xFF243A47),
+    opSoft: Color(0xFF0A3B38),
+    opInk: Color(0xFF77E0D3),
+    relSoft: Color(0xFF392B49),
+    relInk: Color(0xFFDDBDFF),
     keyBg: Color(0xFF272C34),
     keyBorder: Color(0xFF3B414C),
     keyMod: Color(0xFF222730),
@@ -105,6 +121,10 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? primarySoft,
     Color? accent,
     Color? accentSoft,
+    Color? opSoft,
+    Color? opInk,
+    Color? relSoft,
+    Color? relInk,
     Color? keyBg,
     Color? keyBorder,
     Color? keyMod,
@@ -125,6 +145,10 @@ class AppColors extends ThemeExtension<AppColors> {
       primarySoft: primarySoft ?? this.primarySoft,
       accent: accent ?? this.accent,
       accentSoft: accentSoft ?? this.accentSoft,
+      opSoft: opSoft ?? this.opSoft,
+      opInk: opInk ?? this.opInk,
+      relSoft: relSoft ?? this.relSoft,
+      relInk: relInk ?? this.relInk,
       keyBg: keyBg ?? this.keyBg,
       keyBorder: keyBorder ?? this.keyBorder,
       keyMod: keyMod ?? this.keyMod,
@@ -150,6 +174,10 @@ class AppColors extends ThemeExtension<AppColors> {
       primarySoft: Color.lerp(primarySoft, other.primarySoft, t)!,
       accent: Color.lerp(accent, other.accent, t)!,
       accentSoft: Color.lerp(accentSoft, other.accentSoft, t)!,
+      opSoft: Color.lerp(opSoft, other.opSoft, t)!,
+      opInk: Color.lerp(opInk, other.opInk, t)!,
+      relSoft: Color.lerp(relSoft, other.relSoft, t)!,
+      relInk: Color.lerp(relInk, other.relInk, t)!,
       keyBg: Color.lerp(keyBg, other.keyBg, t)!,
       keyBorder: Color.lerp(keyBorder, other.keyBorder, t)!,
       keyMod: Color.lerp(keyMod, other.keyMod, t)!,

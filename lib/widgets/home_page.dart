@@ -7,6 +7,7 @@ import '../services/speech_service.dart';
 import '../state/composer_controller.dart';
 import '../state/settings_controller.dart';
 import 'keyboard_view.dart';
+import 'math_board.dart';
 import 'message_bar.dart';
 import 'notice_banner.dart';
 import 'phrase_strip.dart';
@@ -51,9 +52,11 @@ class HomePage extends StatelessWidget {
                 const SizedBox(height: AppTokens.s12),
               ],
               Expanded(
-                child: mode == InputMode.keyboard
-                    ? const KeyboardView()
-                    : const SymbolBoard(),
+                child: switch (mode) {
+                  InputMode.keyboard => const KeyboardView(),
+                  InputMode.math => const MathBoard(),
+                  InputMode.symbols => const SymbolBoard(),
+                },
               ),
             ],
           ),

@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../core/math_speak.dart';
 import '../core/theme.dart';
 import '../l10n/app_localizations.dart';
 import '../services/speech_service.dart';
 import '../state/composer_controller.dart';
+import '../state/language_controller.dart';
 import '../state/settings_controller.dart';
 
 /// Default-voice Speak button (IMPLEMENTATION_PLAN Task 4).
@@ -94,11 +96,16 @@ class _SpeakButtonState extends State<SpeakButton> {
                 if (context.read<SettingsController>().haptics) {
                   HapticFeedback.selectionClick();
                 }
-                // The engine locale was set on language switch; the POC always
-                // speaks with the engine default rate/pitch (moods off, §2).
-                context
-                    .read<SpeechService>()
-                    .speak(context.read<ComposerController>().text);
+                final composer = context.read<ComposerController>();
+                // In math mode the raw glyphs (`× ÷ = < >`) are pronounced
+                // unreliably by flutter_tts, so translate to words first
+                // (ADDENDUM-02). Numbers pass through; mood rate/pitch ride
+                // on top unchanged.
+                final toSpeak = composer.mode == InputMode.math
+                    ? mathSpeak(composer.text,
+                        context.read<LanguageController>().language)
+                    : composer.text;
+                context.read<SpeechService>().speak(toSpeak);
               }
             : null,
         style: FilledButton.styleFrom(

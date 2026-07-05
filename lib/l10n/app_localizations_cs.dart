@@ -18,6 +18,9 @@ class AppLocalizationsCs extends AppLocalizations {
   String get modeSymbols => 'Symboly';
 
   @override
+  String get modeMath => 'Počítání';
+
+  @override
   String get settings => 'Nastavení';
 
   @override
@@ -37,6 +40,9 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get keySpace => 'mezera';
+
+  @override
+  String get keyBackspace => 'Smazat';
 
   @override
   String wordCount(int count) {
