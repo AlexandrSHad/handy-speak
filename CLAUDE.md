@@ -50,7 +50,7 @@ lib/
   l10n/        ARB sources (app_en.arb = template, app_cs.arb) + generated app_localizations*.dart
   main.dart    entry point; orientation lock, DI wiring
 test/               headless widget/unit tests
-integration_test/   device integration suites (keytap, addendum01)
+integration_test/   device integration suites
 planning/           IMPLEMENTATION_PLAN.md + per-feature ADDENDUM plans (design source of truth)
 docs/               design notes (e.g. forgiving-taps.md)
 handoff/            original handoff archive (_extracted/ is gitignored)
@@ -59,22 +59,30 @@ handoff/            original handoff archive (_extracted/ is gitignored)
 ## Common commands
 
 ```bash
-flutter run                       # run on connected device/emulator
-flutter analyze                   # static analysis (fails the build on lint errors)
-flutter test                      # headless widget/unit tests
-flutter test integration_test/    # device/emulator integration suites
+puro flutter run                       # run on connected device/emulator
+puro flutter analyze                   # static analysis (fails the build on lint errors)
+puro flutter test                      # Dart VM, no device — every test/*_test.dart (fast agent self-check)
+puro flutter test integration_test/    # real integration tests (Android only, run manually with -d <device>)
 dart run flutter_launcher_icons   # regenerate app icons
 dart run flutter_native_splash:create   # regenerate native splash screens
 ```
 
-`flutter` is launched from the user's terminal/IDE; it is not on the PATH of
-an arbitrary shell.
+Run every command through **Puro** (`puro flutter …` / `puro dart …`); `puro`
+is on PATH and auto-selects the `handyspeak` env. The bare `flutter` is not on
+PATH (per-env isolation).
+
+Each ADDENDUM suite has a headless `test/<name>_test.dart` and an on-device
+`integration_test/<name>_test.dart` sharing one `run…Suite()`. The `test/`
+entries let the agent quickly verify logic on the Dart VM; the
+`integration_test/` entries are slower and run manually against an Android
+device (web unsupported, no desktop folders).
 
 ## Conventions
 
 - **Localization:** edit only `lib/l10n/app_en.arb` (template) and
-  `app_cs.arb`. Never hand-edit `app_localizations*.dart` — those are
-  generated (`generate: true` in `pubspec.yaml`, runs on build).
+  `app_cs.arb`. Never hand-edit `app_localizations*.dart` — regenerate with
+  `puro flutter gen-l10n` (also regenerated on build); the generated files
+  are committed.
 - **Adding a feature:** put controllers in `lib/state/`, static content in
   `lib/data/`, UI in `lib/widgets/`; wire new controllers into `MultiProvider`
   in `lib/main.dart`.
