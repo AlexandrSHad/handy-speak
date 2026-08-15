@@ -58,6 +58,7 @@ class _SettingsSheet extends StatelessWidget {
                   ),
                   const Spacer(),
                   IconButton(
+                    tooltip: l10n.closeLabel,
                     onPressed: () => Navigator.of(context).pop(),
                     icon: Icon(Icons.close, color: colors.ink2),
                   ),
@@ -119,74 +120,215 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-class _LanguageSection extends StatelessWidget {
+/// Base/second language pickers (ADDENDUM-03). Replaces the old "pick the
+/// active language from all values" list: a parent now chooses the *pair*
+/// shown in the child's top-bar toggle, not the active language directly.
+/// Checks each slot for an installed voice on open and on every pair
+/// change (mirrors the listener pattern in `keyboard_view.dart`'s
+/// `_numOpen`), plus a manual refresh action for both checks.
+class _LanguageSection extends StatefulWidget {
   const _LanguageSection();
+
+  @override
+  State<_LanguageSection> createState() => _LanguageSectionState();
+}
+
+class _LanguageSectionState extends State<_LanguageSection> {
+  bool? _baseHasVoice;
+  bool? _secondHasVoice;
+  bool _checking = false;
+
+  /// Bumped at the start of every [_checkVoices] call; a stale call whose
+  /// generation no longer matches on completion (superseded by a newer pair
+  /// change before it resolved) discards its result instead of overwriting
+  /// a more recent one.
+  int _checkGeneration = 0;
+
+  LanguageController? _controller;
+  AppLanguage? _lastBase;
+  AppLanguage? _lastSecond;
+
+  // Also tracked (not just the pair): SpeechService starts `initializing`
+  // and only reaches `ready` up to ~16s later. If Settings opens in that
+  // window, `hasVoiceFor` fail-opens (no warning) — re-checking once the
+  // engine is actually ready is the only way the banner can still appear.
+  SpeechService? _speech;
+  SpeechStatus? _lastSpeechStatus;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    var shouldCheck = false;
+
+    final controller = context.read<LanguageController>();
+    if (_controller != controller) {
+      _controller?.removeListener(_onPairChanged);
+      _controller = controller;
+      _controller!.addListener(_onPairChanged);
+      _lastBase = controller.baseLang;
+      _lastSecond = controller.secondLang;
+      shouldCheck = true;
+    }
+
+    final speech = context.read<SpeechService>();
+    if (_speech != speech) {
+      _speech?.removeListener(_onSpeechChanged);
+      _speech = speech;
+      _speech!.addListener(_onSpeechChanged);
+      _lastSpeechStatus = speech.status;
+      shouldCheck = true;
+    }
+
+    if (shouldCheck) _checkVoices();
+  }
+
+  @override
+  void dispose() {
+    _controller?.removeListener(_onPairChanged);
+    _speech?.removeListener(_onSpeechChanged);
+    super.dispose();
+  }
+
+  void _onPairChanged() {
+    final c = _controller!;
+    if (c.baseLang != _lastBase || c.secondLang != _lastSecond) {
+      _lastBase = c.baseLang;
+      _lastSecond = c.secondLang;
+      _checkVoices();
+    }
+  }
+
+  void _onSpeechChanged() {
+    final status = _speech!.status;
+    if (status != _lastSpeechStatus) {
+      _lastSpeechStatus = status;
+      if (status == SpeechStatus.ready) _checkVoices();
+    }
+  }
+
+  Future<void> _checkVoices() async {
+    final generation = ++_checkGeneration;
+    final speech = _speech!;
+    final base = _controller!.baseLang;
+    final second = _controller!.secondLang;
+    setState(() => _checking = true);
+    final results = await Future.wait([
+      speech.hasVoiceFor(base),
+      speech.hasVoiceFor(second),
+    ]);
+    if (!mounted || generation != _checkGeneration) return;
+    setState(() {
+      _baseHasVoice = results[0];
+      _secondHasVoice = results[1];
+      _checking = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     final l10n = AppLocalizations.of(context)!;
-    final lang = context.watch<LanguageController>().language;
-    final speech = context.watch<SpeechService>();
+    final controller = context.watch<LanguageController>();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionTitle(l10n.settingsLanguage, subtitle: l10n.settingsLanguageDesc),
-        for (final l in AppLanguage.values)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppTokens.s8),
-            child: Material(
-              color: lang == l ? colors.primarySoft : colors.surface2,
-              borderRadius: BorderRadius.circular(16),
-              child: InkWell(
+    Widget picker(AppLanguage current, ValueChanged<AppLanguage> onSelect,
+        String testKeyPrefix) {
+      return Column(
+        children: [
+          for (final l in AppLanguage.values)
+            Padding(
+              key: ValueKey('settingsLangPicker_${testKeyPrefix}_${l.name}'),
+              padding: const EdgeInsets.only(bottom: AppTokens.s8),
+              child: Material(
+                color: current == l ? colors.primarySoft : colors.surface2,
                 borderRadius: BorderRadius.circular(16),
-                // §6.1.1 — switching here also clears the message.
-                onTap: () => context.read<LanguageController>().setLanguage(l),
-                child: Container(
-                  padding: const EdgeInsets.all(AppTokens.s16),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: lang == l ? colors.primary : colors.divider,
-                      width: 1.5,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => onSelect(l),
+                  child: Container(
+                    padding: const EdgeInsets.all(AppTokens.s16),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: current == l ? colors.primary : colors.divider,
+                        width: 1.5,
+                      ),
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: colors.surface,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: colors.divider),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: colors.surface,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: colors.divider),
+                          ),
+                          child: Text(l.short,
+                              style: TextStyle(
+                                  color: colors.ink2,
+                                  fontWeight: FontWeight.w800)),
                         ),
-                        child: Text(l.short,
-                            style: TextStyle(
-                                color: colors.ink2,
-                                fontWeight: FontWeight.w800)),
-                      ),
-                      const SizedBox(width: AppTokens.s12),
-                      Text(
-                        l.nativeName,
-                        style: TextStyle(
-                          color: colors.ink,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
+                        const SizedBox(width: AppTokens.s12),
+                        Text(
+                          l.nativeName,
+                          style: TextStyle(
+                            color: colors.ink,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      ),
-                      const Spacer(),
-                      if (lang == l)
-                        Icon(Icons.check_circle, color: colors.primary),
-                    ],
+                        const Spacer(),
+                        if (current == l)
+                          Icon(Icons.check_circle, color: colors.primary),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        if (lang == AppLanguage.cs && !speech.csAvailable)
-          NoticeBanner(text: l10n.voiceMissing),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: _SectionTitle(l10n.settingsLanguage,
+                  subtitle: l10n.settingsLanguageDesc),
+            ),
+            IconButton(
+              tooltip: l10n.settingsRefreshVoices,
+              onPressed: _checking ? null : _checkVoices,
+              icon: _checking
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: colors.ink3,
+                      ),
+                    )
+                  : Icon(Icons.refresh, color: colors.ink3),
+            ),
+          ],
+        ),
+        _SectionTitle(l10n.settingsBaseLangName,
+            subtitle: l10n.settingsBaseLangDesc),
+        picker(controller.baseLang, controller.setBaseLang, 'base'),
+        if (_baseHasVoice == false)
+          NoticeBanner(
+              text: l10n.voiceMissingNamed(controller.baseLang.nativeName)),
+        const SizedBox(height: AppTokens.s16),
+        _SectionTitle(l10n.settingsSecondLangName,
+            subtitle: l10n.settingsSecondLangDesc),
+        picker(controller.secondLang, controller.setSecondLang, 'second'),
+        if (_secondHasVoice == false)
+          NoticeBanner(
+              text: l10n.voiceMissingNamed(controller.secondLang.nativeName)),
       ],
     );
   }

@@ -23,6 +23,15 @@ const _kMathSpeak = <AppLanguage, Map<String, String>>{
     '<': 'je menší než',
     '>': 'je větší než',
   },
+  AppLanguage.uk: {
+    '+': 'плюс',
+    '−': 'мінус',
+    '×': 'помножити на',
+    '÷': 'поділити на',
+    '=': 'дорівнює',
+    '<': 'менше ніж',
+    '>': 'більше ніж',
+  },
 };
 
 /// Translates a composed math string into speakable words. Glyph tokens map

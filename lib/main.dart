@@ -81,7 +81,7 @@ class HandySpeakApp extends StatelessWidget {
             title: 'HandySpeak',
             debugShowCheckedModeBanner: false,
             locale: lang.language.locale,
-            supportedLocales: const [Locale('en'), Locale('cs')],
+            supportedLocales: const [Locale('en'), Locale('cs'), Locale('uk')],
             localizationsDelegates: const [
               AppLocalizations.delegate,
               GlobalMaterialLocalizations.delegate,

@@ -62,7 +62,21 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get settingsLanguageDesc =>
-      'Přepne celou tabulku i mluvící hlas. Děti mohou ťuknout i na EN / CZ nahoře.';
+      'Vyber dva jazyky zobrazené v horní liště. Ťuknutí přepne celou tabulku i mluvící hlas.';
+
+  @override
+  String get settingsBaseLangName => 'Základní jazyk';
+
+  @override
+  String get settingsBaseLangDesc =>
+      'V horní liště je první; tabulka jím začíná.';
+
+  @override
+  String get settingsSecondLangName => 'Druhý jazyk';
+
+  @override
+  String get settingsSecondLangDesc =>
+      'Druhý jazyk, na který dítě může přepnout.';
 
   @override
   String get settingsVoice => 'Mluvený hlas';
@@ -127,10 +141,6 @@ class AppLocalizationsCs extends AppLocalizations {
       'Na tabulce skryto — fráze tu zůstávají uložené a vrátí se po zapnutí.';
 
   @override
-  String get voiceMissing =>
-      'V tabletu zatím není český hlas — přidej ho v nastavení řeči zařízení pro nejlepší výslovnost.';
-
-  @override
   String get preparingVoice => 'Připravuji hlas…';
 
   @override
@@ -139,4 +149,15 @@ class AppLocalizationsCs extends AppLocalizations {
   @override
   String get voiceUnavailableDetail =>
       'Tablet zatím nemá přístup k mluvenému hlasu, takže aplikace nemůže mluvit. Otevři v zařízení nastavení řeči (převod textu na řeč) a nastav hlas.';
+
+  @override
+  String voiceMissingNamed(String lang) {
+    return 'V tabletu zatím není hlas pro jazyk $lang — přidej ho v nastavení řeči zařízení pro nejlepší výslovnost.';
+  }
+
+  @override
+  String get closeLabel => 'Zavřít';
+
+  @override
+  String get settingsRefreshVoices => 'Obnovit kontrolu hlasu';
 }

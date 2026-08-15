@@ -141,7 +141,12 @@ class _LanguageToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final lang = context.select<LanguageController, AppLanguage>((c) => c.language);
+    final l10n = AppLocalizations.of(context)!;
+    // Watching (not selecting) because both `language` and the pair-derived
+    // `pair` list are read here — a single ChangeNotifier rebuild covers both.
+    final controller = context.watch<LanguageController>();
+    final lang = controller.language;
+    final pair = controller.pair;
 
     Widget seg(AppLanguage l) {
       final active = lang == l;
@@ -174,21 +179,24 @@ class _LanguageToggle extends StatelessWidget {
       );
     }
 
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: colors.surface2,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.divider),
-      ),
-      child: Row(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppTokens.s8),
-            child: Icon(Icons.language, size: 18, color: colors.ink3),
-          ),
-          for (final l in AppLanguage.values) seg(l),
-        ],
+    return Semantics(
+      label: l10n.settingsLanguage,
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: colors.surface2,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: colors.divider),
+        ),
+        child: Row(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppTokens.s8),
+              child: Icon(Icons.language, size: 18, color: colors.ink3),
+            ),
+            for (final l in pair) seg(l),
+          ],
+        ),
       ),
     );
   }

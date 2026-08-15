@@ -61,7 +61,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsLanguageDesc =>
-      'Switch the whole board and the speaking voice. Kids can also tap EN / CZ in the top bar.';
+      'Pick the two languages shown in the top bar. Tapping one switches the whole board and the speaking voice.';
+
+  @override
+  String get settingsBaseLangName => 'Base language';
+
+  @override
+  String get settingsBaseLangDesc =>
+      'Shown first in the top bar; the board starts here.';
+
+  @override
+  String get settingsSecondLangName => 'Second language';
+
+  @override
+  String get settingsSecondLangDesc =>
+      'The other language the child can flip to.';
 
   @override
   String get settingsVoice => 'Speaking voice';
@@ -126,10 +140,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Hidden on the board — phrases stay saved here and come back when you switch this on.';
 
   @override
-  String get voiceMissing =>
-      'No Czech voice on this tablet yet — add one in your device\'s speech settings for the best pronunciation.';
-
-  @override
   String get preparingVoice => 'Preparing voice…';
 
   @override
@@ -138,4 +148,15 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get voiceUnavailableDetail =>
       'This tablet can\'t reach a speaking voice, so the app can\'t talk yet. Open your device\'s speech (text-to-speech) settings to set one up.';
+
+  @override
+  String voiceMissingNamed(String lang) {
+    return 'No $lang voice on this tablet yet — add one in your device\'s speech settings for the best pronunciation.';
+  }
+
+  @override
+  String get closeLabel => 'Close';
+
+  @override
+  String get settingsRefreshVoices => 'Refresh voice check';
 }

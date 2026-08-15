@@ -19,7 +19,11 @@
     }
   },
   "settingsLanguage": "Language",
-  "settingsLanguageDesc": "Switch the whole board and the speaking voice. Kids can also tap EN / CZ in the top bar.",
+  "settingsLanguageDesc": "Pick the two languages shown in the top bar. Tapping one switches the whole board and the speaking voice.",
+  "settingsBaseLangName": "Base language",
+  "settingsBaseLangDesc": "Shown first in the top bar; the board starts here.",
+  "settingsSecondLangName": "Second language",
+  "settingsSecondLangDesc": "The other language the child can flip to.",
   "settingsVoice": "Speaking voice",
   "settingsMoodName": "Mood voices",
   "settingsMoodDesc": "Let the child pick a mood that changes the voice's pitch and speed. Off uses one steady voice.",
@@ -39,8 +43,15 @@
   "settingsShowPhrasesName": "Show phrase shortcuts",
   "settingsShowPhrasesDesc": "The quick-phrase strip above the keyboard. Turn off for kids who don't read yet — keys and symbols grow bigger.",
   "settingsPhrasesHiddenNote": "Hidden on the board — phrases stay saved here and come back when you switch this on.",
-  "voiceMissing": "No Czech voice on this tablet yet — add one in your device's speech settings for the best pronunciation.",
   "preparingVoice": "Preparing voice…",
   "voiceUnavailable": "Voice unavailable",
-  "voiceUnavailableDetail": "This tablet can't reach a speaking voice, so the app can't talk yet. Open your device's speech (text-to-speech) settings to set one up."
+  "voiceUnavailableDetail": "This tablet can't reach a speaking voice, so the app can't talk yet. Open your device's speech (text-to-speech) settings to set one up.",
+  "voiceMissingNamed": "No {lang} voice on this tablet yet — add one in your device's speech settings for the best pronunciation.",
+  "@voiceMissingNamed": {
+    "placeholders": {
+      "lang": { "type": "String" }
+    }
+  },
+  "closeLabel": "Close",
+  "settingsRefreshVoices": "Refresh voice check"
 }

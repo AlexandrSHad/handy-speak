@@ -25,4 +25,14 @@ const Map<AppLanguage, List<Phrase>> kSeedPhrases = {
     Phrase(text: 'Můžu si hrát?', pinned: false, uses: 14),
     Phrase(text: 'Hotovo', pinned: false, uses: 12),
   ],
+  AppLanguage.uk: [
+    Phrase(text: 'Мені потрібна допомога', pinned: true, uses: 42),
+    Phrase(text: 'В туалет, будь ласка', pinned: true, uses: 31),
+    Phrase(text: 'Я голодний', pinned: true, uses: 28),
+    Phrase(text: 'Я не розумію', pinned: true, uses: 19),
+    Phrase(text: 'Дякую', pinned: false, uses: 24),
+    Phrase(text: 'Так, будь ласка', pinned: false, uses: 22),
+    Phrase(text: 'Можна мені погратися?', pinned: false, uses: 14),
+    Phrase(text: 'Готово', pinned: false, uses: 12),
+  ],
 };

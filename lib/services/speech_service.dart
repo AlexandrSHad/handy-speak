@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
+import '../core/app_language.dart';
+
 /// Readiness of the text-to-speech engine. The UI gates the Speak button on
 /// this: [initializing] shows a spinner, [unavailable] shows an error.
 enum SpeechStatus { initializing, ready, unavailable }
@@ -34,12 +36,6 @@ class SpeechService extends ChangeNotifier {
   SpeechStatus _status = SpeechStatus.initializing;
   SpeechStatus get status => _status;
   bool get isReady => _status == SpeechStatus.ready;
-
-  /// Soft signal only (§ Task 1): `true` can mean "engine supports the
-  /// language" while the voice data pack is absent. Drives the in-app
-  /// "No Czech voice…" warning, not a hard gate.
-  bool csAvailable = true;
-  bool enAvailable = true;
 
   String _locale = 'en-US';
 
@@ -75,13 +71,6 @@ class SpeechService extends ChangeNotifier {
     _tts.setPauseHandler(() => _setSpeaking(false));
     _tts.setErrorHandler((_) => _setSpeaking(false));
 
-    try {
-      csAvailable = (await _tts.isLanguageAvailable('cs-CZ')) == true;
-      enAvailable = (await _tts.isLanguageAvailable('en-US')) == true;
-    } catch (_) {
-      // Leave optimistic defaults; the audible check is the real proof.
-    }
-
     // Call the engine directly, NOT the public setLanguage(): that one is gated
     // on [isReady], which is still false here, so it would no-op.
     await _tts.setLanguage(_locale);
@@ -94,6 +83,26 @@ class SpeechService extends ChangeNotifier {
       await _tts.setLanguage(locale);
     } catch (_) {
       // Non-fatal: an unsupported locale must not crash composition.
+    }
+  }
+
+  /// Checks whether an installed TTS voice matches [lang] (soft signal:
+  /// distinguishes "engine supports it" from "voice pack installed", unlike
+  /// the old isLanguageAvailable check). Returns `true` (never warn) if the
+  /// engine isn't ready yet, or if the check itself fails for any reason —
+  /// this only ever gates a soft warning banner, never a hard block.
+  Future<bool> hasVoiceFor(AppLanguage lang) async {
+    if (!isReady) return true;
+    try {
+      final voices = await _tts.getVoices;
+      if (voices is! List) return true;
+      // A per-entry `is Map` guard (rather than an unchecked cast inside the
+      // outer try/catch) means one malformed voice entry is skipped, not
+      // treated as a reason to fail-open the whole check.
+      return voices.any((v) => v is Map && (v['locale']
+          ?.toString().toLowerCase().startsWith(lang.key) ?? false));
+    } catch (_) {
+      return true;
     }
   }
 

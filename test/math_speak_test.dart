@@ -32,6 +32,15 @@ void main() {
       expect(mathSpeak('12 × 5 =', AppLanguage.cs), '12 krát 5 rovná se');
     });
 
+    test('translates every operator glyph to its UK word', () {
+      expect(mathSpeak('+ − × ÷ = < >', AppLanguage.uk),
+          'плюс мінус помножити на поділити на дорівнює менше ніж більше ніж');
+    });
+
+    test('mixed number/glyph problem composes to spoken words (UK)', () {
+      expect(mathSpeak('12 × 5 =', AppLanguage.uk), '12 помножити на 5 дорівнює');
+    });
+
     test('minus is the true glyph U+2212, never ASCII hyphen', () {
       // The map key is '−' (U+2212). An ASCII '-' must NOT match — it passes
       // through verbatim (the engine would read "hyphen"), proving the lookup

@@ -7,6 +7,7 @@ import 'package:intl/intl.dart' as intl;
 
 import 'app_localizations_cs.dart';
 import 'app_localizations_en.dart';
+import 'app_localizations_uk.dart';
 
 // ignore_for_file: type=lint
 
@@ -95,7 +96,8 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('cs'),
-    Locale('en')
+    Locale('en'),
+    Locale('uk')
   ];
 
   /// No description provided for @appTitle.
@@ -185,8 +187,32 @@ abstract class AppLocalizations {
   /// No description provided for @settingsLanguageDesc.
   ///
   /// In en, this message translates to:
-  /// **'Switch the whole board and the speaking voice. Kids can also tap EN / CZ in the top bar.'**
+  /// **'Pick the two languages shown in the top bar. Tapping one switches the whole board and the speaking voice.'**
   String get settingsLanguageDesc;
+
+  /// No description provided for @settingsBaseLangName.
+  ///
+  /// In en, this message translates to:
+  /// **'Base language'**
+  String get settingsBaseLangName;
+
+  /// No description provided for @settingsBaseLangDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Shown first in the top bar; the board starts here.'**
+  String get settingsBaseLangDesc;
+
+  /// No description provided for @settingsSecondLangName.
+  ///
+  /// In en, this message translates to:
+  /// **'Second language'**
+  String get settingsSecondLangName;
+
+  /// No description provided for @settingsSecondLangDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'The other language the child can flip to.'**
+  String get settingsSecondLangDesc;
 
   /// No description provided for @settingsVoice.
   ///
@@ -302,12 +328,6 @@ abstract class AppLocalizations {
   /// **'Hidden on the board — phrases stay saved here and come back when you switch this on.'**
   String get settingsPhrasesHiddenNote;
 
-  /// No description provided for @voiceMissing.
-  ///
-  /// In en, this message translates to:
-  /// **'No Czech voice on this tablet yet — add one in your device\'s speech settings for the best pronunciation.'**
-  String get voiceMissing;
-
   /// No description provided for @preparingVoice.
   ///
   /// In en, this message translates to:
@@ -325,6 +345,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This tablet can\'t reach a speaking voice, so the app can\'t talk yet. Open your device\'s speech (text-to-speech) settings to set one up.'**
   String get voiceUnavailableDetail;
+
+  /// No description provided for @voiceMissingNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'No {lang} voice on this tablet yet — add one in your device\'s speech settings for the best pronunciation.'**
+  String voiceMissingNamed(String lang);
+
+  /// No description provided for @closeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get closeLabel;
+
+  /// No description provided for @settingsRefreshVoices.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh voice check'**
+  String get settingsRefreshVoices;
 }
 
 class _AppLocalizationsDelegate
@@ -338,7 +376,7 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['cs', 'en'].contains(locale.languageCode);
+      <String>['cs', 'en', 'uk'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -351,6 +389,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
       return AppLocalizationsCs();
     case 'en':
       return AppLocalizationsEn();
+    case 'uk':
+      return AppLocalizationsUk();
   }
 
   throw FlutterError(
