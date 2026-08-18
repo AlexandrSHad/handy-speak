@@ -1,7 +1,7 @@
 name: handy_speak
 description: "HandySpeak — a bilingual AAC tablet app for children (POC)."
 publish_to: "none"
-version: 0.4.0+1
+version: 0.5.0+1
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
