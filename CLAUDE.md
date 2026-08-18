@@ -97,8 +97,9 @@ device (web unsupported, no desktop folders).
 - **Per-feature tracking:** substantial features get an ADDENDUM plan in
   `planning/` paired with an integration-test suite in `integration_test/`
   (see the `keytap` and `addendum01` pairs). Follow that shape for new work
-  via the `handyspeak-suites` skill (`.pi/skills/`) when creating or
-  updating a suite pair.
+  via the `handyspeak-suites` skill (`.claude/skills/` — one skill home
+  shared by both pi and Claude Code) when creating or updating a suite
+  pair.
 - **Inputs:** the card-input idiom (surface2 fill, 16 px radius, divider
   border → primary on focus) lives in `AppTheme`'s `InputDecorationTheme`
   — never hand-roll `InputDecoration` chrome per field. Dropdowns follow
