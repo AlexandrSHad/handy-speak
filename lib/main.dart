@@ -34,7 +34,8 @@ Future<void> main() async {
   final settings = SettingsController(storage)..load();
   final phrases = PhrasesController(storage)..load();
   final composer = ComposerController();
-  final language = LanguageController(storage, speech, composer)..load();
+  final language = LanguageController(storage, speech, composer)
+    ..load(deviceLocale: WidgetsBinding.instance.platformDispatcher.locale);
 
   runApp(HandySpeakApp(
     storage: storage,
@@ -80,7 +81,11 @@ class HandySpeakApp extends StatelessWidget {
           return MaterialApp(
             title: 'HandySpeak',
             debugShowCheckedModeBanner: false,
-            locale: lang.language.locale,
+            // ADR-0002: the UI locale is pinned to the MAIN language — the
+            // locale stops moving on every active-language toggle (the
+            // Consumer below still rebuilds so the board flips; only a
+            // main-language change moves the locale itself).
+            locale: lang.mainLang.locale,
             supportedLocales: const [Locale('en'), Locale('cs'), Locale('uk')],
             localizationsDelegates: const [
               AppLocalizations.delegate,

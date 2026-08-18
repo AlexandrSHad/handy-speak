@@ -254,12 +254,13 @@ void runAddendum02Suite() {
       await tapKey(tester, 'i');
       expect(readProvider<ComposerController>(tester).text, 'hi');
 
-      // EN → CS: sentence cleared, math survives.
+      // EN → CS: sentence cleared, math survives. Chrome (mode tabs, Speak
+      // label) stays EN — it's pinned to main per ADR-0002.
       await tester.tap(find.text('CZ'));
       await tester.pumpAndSettle();
       expect(readProvider<ComposerController>(tester).text, '');
 
-      await tester.tap(find.text(cs.modeMath));
+      await tester.tap(find.text(en.modeMath));
       await tester.pumpAndSettle();
       expect(readProvider<ComposerController>(tester).text.trim(), '3 + 4');
 
