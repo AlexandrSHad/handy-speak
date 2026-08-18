@@ -246,7 +246,7 @@ class _LanguageSectionState extends State<_LanguageSection> {
       required ValueChanged<AppLanguage> onChanged,
     }) {
       Widget chip(AppLanguage l) => Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
             decoration: BoxDecoration(
               color: colors.surface,
               borderRadius: BorderRadius.circular(6),
@@ -255,7 +255,7 @@ class _LanguageSectionState extends State<_LanguageSection> {
             child: Text(l.short,
                 style: TextStyle(
                     color: colors.ink2,
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w800)),
           );
       Widget slotLabel(AppLanguage l) => Row(
@@ -288,15 +288,16 @@ class _LanguageSectionState extends State<_LanguageSection> {
         // Rounded menu corners matching the field's 16 px radius.
         borderRadius: BorderRadius.circular(16),
         icon: Icon(Icons.arrow_drop_down, color: colors.ink3),
-        // Closed state renders its own compact row — NOT the 52 px menu
-        // item, which the decorator's padding would clip. The shared
-        // [chip] keeps the badge pixel-identical in both states.
+        // Closed state renders its own row — NOT the 52 px menu item, which
+        // the decorator's padding would clip. The row is a bare 16 px text
+        // line (badge kept inside the line box), so the field sizes from
+        // the SAME decorator metrics + text-line driver as the other
+        // inputs — it grows with system text scale instead of sitting at a
+        // fixed 56 while every other input grows around it.
         selectedItemBuilder: (_) => [
           for (final l in items)
             Container(
               alignment: Alignment.centerLeft,
-              padding:
-                  const EdgeInsets.symmetric(vertical: AppTokens.s4),
               child: slotLabel(l),
             ),
         ],
@@ -316,12 +317,13 @@ class _LanguageSectionState extends State<_LanguageSection> {
           if (l != null) onChanged(l);
         },
         decoration: InputDecoration(
-          constraints: const BoxConstraints(minHeight: 56),
-          isDense: true,
           filled: true,
           fillColor: colors.surface2,
+          // Vertical padding mirrors the sheet's other input (the phrase
+          // field's default decorator metrics) so both grow identically
+          // with text scale; pinned by the addendum04 height tests.
           contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppTokens.s16, vertical: AppTokens.s4),
+              horizontal: AppTokens.s16, vertical: 16),
           border: border(colors.divider),
           enabledBorder: border(colors.divider),
           focusedBorder: border(colors.primary),

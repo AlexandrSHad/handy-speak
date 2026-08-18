@@ -207,6 +207,57 @@ void runAddendum04Suite() {
     });
   });
 
+  group('ADDENDUM-04 · dropdown field', () {
+    // The phrase input is the sheet's other input — the dropdown must
+    // match its height at every text scale (kids' tablets commonly run
+    // accessibility font scaling; a fixed-height dropdown shrinks relative
+    // to inputs that scale).
+    Future<void> expectDropdownMatchesInput(WidgetTester tester) async {
+      await pumpApp(tester, prefs: {
+        'main_lang': 'en',
+        'second_lang': 'cs',
+      });
+      await openSettings(tester);
+
+      final dropdownH = tester
+          .getSize(find.byKey(const ValueKey('settingsLangDropdown_main')))
+          .height;
+
+      // The phrase section may not be built yet (lazy ListView below the
+      // fold at larger text scales) — scroll until it exists, then pin it.
+      var attempts = 0;
+      while (find.byType(TextField).evaluate().isEmpty && attempts++ < 10) {
+        await tester.drag(
+            find.descendant(
+                of: find.byType(BottomSheet),
+                matching: find.byType(ListView)),
+            const Offset(0, -500));
+        await tester.pumpAndSettle();
+      }
+      final input = find.byType(TextField);
+      await tester.ensureVisible(input);
+      await tester.pumpAndSettle();
+      final inputH = tester.getSize(input).height;
+
+      expect(dropdownH, closeTo(inputH, 1.0),
+          reason: 'dropdown $dropdownH vs phrase input $inputH');
+    }
+
+    testWidgets('closed field matches other inputs at text scale 1.0',
+        (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 1.0;
+      addTearDown(tester.platformDispatcher.clearAllTestValues);
+      await expectDropdownMatchesInput(tester);
+    });
+
+    testWidgets('closed field matches other inputs at text scale 1.3',
+        (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+      addTearDown(tester.platformDispatcher.clearAllTestValues);
+      await expectDropdownMatchesInput(tester);
+    });
+  });
+
   group('ADDENDUM-04 · persistence', () {
     testWidgets('set + active language survive a restart', (tester) async {
       await pumpApp(tester, prefs: {
