@@ -9,8 +9,8 @@ import '../state/composer_controller.dart';
 import '../state/language_controller.dart';
 import '../state/settings_controller.dart';
 
-/// Brand, Keyboard/Symbols toggle, EN/CZ language toggle and a settings button
-/// (IMPLEMENTATION_PLAN Task 3).
+/// Brand, Keyboard/Symbols toggle, language-set toggle (hidden in
+/// single-language mode) and a settings button (IMPLEMENTATION_PLAN Task 3).
 class TopBar extends StatelessWidget {
   const TopBar({super.key, required this.onOpenSettings});
 
@@ -20,6 +20,8 @@ class TopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final l10n = AppLocalizations.of(context)!;
+    final dual = context.select<LanguageController, bool>(
+        (c) => c.set.length > 1);
 
     return Row(
       children: [
@@ -27,8 +29,12 @@ class TopBar extends StatelessWidget {
         const Spacer(),
         const _ModeToggle(),
         const Spacer(),
-        const _LanguageToggle(),
-        const SizedBox(width: AppTokens.s12),
+        // Q15: single-language mode hides the toggle entirely and the
+        // Spacers reflow the row naturally — no extra styling.
+        if (dual) ...[
+          const _LanguageToggle(),
+          const SizedBox(width: AppTokens.s12),
+        ],
         Material(
           color: colors.surface,
           shape: CircleBorder(side: BorderSide(color: colors.divider)),
@@ -143,7 +149,9 @@ class _LanguageToggle extends StatelessWidget {
     final colors = context.colors;
     final l10n = AppLocalizations.of(context)!;
     // Watching (not selecting) because both `language` and the set-derived
-    // `set` list are read here — a single ChangeNotifier rebuild covers both.
+    // `set` list are read here — a single ChangeNotifier rebuild covers
+    // both. Only reachable in two-language mode; TopBar hides the toggle
+    // entirely when the set has no second language.
     final controller = context.watch<LanguageController>();
     final lang = controller.language;
     final languages = controller.set;
