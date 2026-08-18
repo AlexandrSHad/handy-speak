@@ -145,7 +145,7 @@ void runAddendum03Suite() {
   });
 
   group('ADDENDUM-03 · Settings language pickers', () {
-    testWidgets('Base and Second sections each offer all 3 languages',
+    testWidgets('main dropdown offers all 3 languages; second excludes main',
         (tester) async {
       await pumpApp(tester, prefs: {
         'main_lang': 'en',
@@ -153,16 +153,39 @@ void runAddendum03Suite() {
       });
       await openSettings(tester);
 
-      expect(find.text(en.settingsBaseLangName), findsOneWidget);
+      expect(find.text(en.settingsMainLangName), findsOneWidget);
       expect(find.text(en.settingsSecondLangName), findsOneWidget);
-      // Each language's native name appears once per picker → 2 occurrences.
-      expect(find.text('English'), findsNWidgets(2));
-      expect(find.text('Čeština'), findsNWidgets(2));
-      expect(find.text('Українська'), findsNWidgets(2));
+
+      // Main slot: every supported language is offered. (The currently
+      // selected item renders twice — closed field + open menu — so
+      // presence, not count.)
+      await tester
+          .tap(find.byKey(const ValueKey('settingsLangDropdown_main')));
+      await tester.pumpAndSettle();
+      for (final l in AppLanguage.values) {
+        expect(find.byKey(ValueKey('settingsLangItem_main_${l.name}')),
+            findsWidgets);
+      }
+      // Tap outside the menu to close it without changing anything.
+      await tester.tapAt(const Offset(640, 30));
+      await tester.pumpAndSettle();
+
+      // Second slot: the main language is never offered (Q12 — only the
+      // Switch removes/adds; the dropdown can't collide with main). The
+      // selected item again renders twice (closed field + menu).
+      await tester
+          .tap(find.byKey(const ValueKey('settingsLangDropdown_second')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('settingsLangItem_second_cs')),
+          findsWidgets);
+      expect(find.byKey(const ValueKey('settingsLangItem_second_uk')),
+          findsWidgets);
+      expect(find.byKey(const ValueKey('settingsLangItem_second_en')),
+          findsNothing);
     });
 
     testWidgets(
-        'picking the second slot\'s language equal to base swaps the pair',
+        'picking the current second language as main swaps the set (Q12)',
         (tester) async {
       await pumpApp(tester, prefs: {
         'main_lang': 'en',
@@ -170,8 +193,12 @@ void runAddendum03Suite() {
       }); // main=en, second=cs
       await openSettings(tester);
 
-      // Second picker's "English" row (main's current language) — swaps.
-      await tester.tap(find.byKey(const ValueKey('settingsLangPicker_second_en')));
+      // Main dropdown's "Čeština" row (the second slot's language) — swaps.
+      await tester
+          .tap(find.byKey(const ValueKey('settingsLangDropdown_main')));
+      await tester.pumpAndSettle();
+      await tester
+          .tap(find.byKey(const ValueKey('settingsLangItem_main_cs')));
       await tester.pumpAndSettle();
 
       // Set swapped: main=cs, second=en. Verify via the top-bar pills,
@@ -181,7 +208,7 @@ void runAddendum03Suite() {
       expect(topBarPillText('UK'), findsNothing);
     });
 
-    testWidgets('picking a non-conflicting language in the base picker works',
+    testWidgets('picking a non-conflicting language as main works',
         (tester) async {
       await pumpApp(tester, prefs: {
         'main_lang': 'en',
@@ -189,7 +216,11 @@ void runAddendum03Suite() {
       }); // main=en, second=cs
       await openSettings(tester);
 
-      await tester.tap(find.byKey(const ValueKey('settingsLangPicker_main_uk')));
+      await tester
+          .tap(find.byKey(const ValueKey('settingsLangDropdown_main')));
+      await tester.pumpAndSettle();
+      await tester
+          .tap(find.byKey(const ValueKey('settingsLangItem_main_uk')));
       await tester.pumpAndSettle();
 
       expect(topBarPillText('UK'), findsOneWidget);

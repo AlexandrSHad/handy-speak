@@ -239,12 +239,12 @@ Rework `_LanguageSection` (line 130) / its State:
   when `controller.deviceLangUnsupported`, an `NoticeBanner`-styled info
   banner (reuse `NoticeBanner`; the design's accent tint is a web-only
   refinement — token reuse wins) with
-  `l10n.settingsUnsupportedDeviceLang(<deviceLangName>)`. Name via
-  `controller.deviceLocale?.displayName(mainLang.locale)` (intl) — names
-  the device language **in the main language** (an EN UI shows "German"
-  for a `de` device; tests assert non-empty only, since ICU data varies
-  between VM and Android); fall back to `languageCode.toUpperCase()` if
-  the platform returns empty.
+  `l10n.settingsUnsupportedDeviceLang(<deviceLangName>)`. Name shown as
+  the uppercase language code (e.g. "DE", "PL") — intl 0.20.2 ships no
+  CLDR display names and dart:ui `Locale` has no `displayName`, so the
+  plan's `displayName(mainLang.locale)` idea was dropped at implementation
+  (code fallback is locale-independent and needs no ICU data); tests
+  assert the code form. Revisit if a display-name source lands.
 
 ### 6. Top bar — `lib/widgets/top_bar.dart`
 

@@ -120,12 +120,15 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-/// Base/second language pickers (ADDENDUM-03). Replaces the old "pick the
-/// active language from all values" list: a parent now chooses the *pair*
-/// shown in the child's top-bar toggle, not the active language directly.
-/// Checks each slot for an installed voice on open and on every pair
-/// change (mirrors the listener pattern in `keyboard_view.dart`'s
-/// `_numOpen`), plus a manual refresh action for both checks.
+/// Language set slots (ADDENDUM-04): the parent configures a **main**
+/// language plus an optional **second** language — a dropdown per slot and
+/// a Switch that adds/removes the second language (the only removal path,
+/// Q12). The main dropdown swaps instead of colliding when the parent picks
+/// the current second language. Checks each configured slot for an
+/// installed voice on open and on every set change (mirrors the listener
+/// pattern in `keyboard_view.dart`'s `_numOpen`), plus a manual refresh
+/// action. Shows the persistent unsupported-device-language banner (Q13)
+/// when first-run seeding fell back to `en`.
 class _LanguageSection extends StatefulWidget {
   const _LanguageSection();
 
@@ -162,9 +165,9 @@ class _LanguageSectionState extends State<_LanguageSection> {
 
     final controller = context.read<LanguageController>();
     if (_controller != controller) {
-      _controller?.removeListener(_onPairChanged);
+      _controller?.removeListener(_onSetChanged);
       _controller = controller;
-      _controller!.addListener(_onPairChanged);
+      _controller!.addListener(_onSetChanged);
       _lastMain = controller.mainLang;
       _lastSecond = controller.secondLang;
       shouldCheck = true;
@@ -184,12 +187,12 @@ class _LanguageSectionState extends State<_LanguageSection> {
 
   @override
   void dispose() {
-    _controller?.removeListener(_onPairChanged);
+    _controller?.removeListener(_onSetChanged);
     _speech?.removeListener(_onSpeechChanged);
     super.dispose();
   }
 
-  void _onPairChanged() {
+  void _onSetChanged() {
     final c = _controller!;
     if (c.mainLang != _lastMain || c.secondLang != _lastSecond) {
       _lastMain = c.mainLang;
@@ -232,64 +235,91 @@ class _LanguageSectionState extends State<_LanguageSection> {
     final l10n = AppLocalizations.of(context)!;
     final controller = context.watch<LanguageController>();
 
-    Widget picker(AppLanguage current, ValueChanged<AppLanguage> onSelect,
-        String testKeyPrefix) {
-      return Column(
-        children: [
-          for (final l in AppLanguage.values)
-            Padding(
-              key: ValueKey('settingsLangPicker_${testKeyPrefix}_${l.name}'),
-              padding: const EdgeInsets.only(bottom: AppTokens.s8),
-              child: Material(
-                color: current == l ? colors.primarySoft : colors.surface2,
-                borderRadius: BorderRadius.circular(16),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () => onSelect(l),
-                  child: Container(
-                    padding: const EdgeInsets.all(AppTokens.s16),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: current == l ? colors.primary : colors.divider,
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: colors.surface,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: colors.divider),
-                          ),
-                          child: Text(l.short,
-                              style: TextStyle(
-                                  color: colors.ink2,
-                                  fontWeight: FontWeight.w800)),
-                        ),
-                        const SizedBox(width: AppTokens.s12),
-                        Text(
-                          l.nativeName,
-                          style: TextStyle(
-                            color: colors.ink,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const Spacer(),
-                        if (current == l)
-                          Icon(Icons.check_circle, color: colors.primary),
-                      ],
-                    ),
+    // Dropdown field in the sheet's card idiom (`.a04-select`): surface2
+    // fill, 16 px radius, 1.5 px divider border (primary when focused),
+    // 56 px tall (AAC target). Items render the chip + endonym anatomy
+    // (`.a04-chip`) at a 52 px minimum height.
+    Widget dropdownField({
+      required String slot,
+      required AppLanguage value,
+      required List<AppLanguage> items,
+      required ValueChanged<AppLanguage> onChanged,
+    }) {
+      Widget chip(AppLanguage l) => Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: colors.divider),
+            ),
+            child: Text(l.short,
+                style: TextStyle(
+                    color: colors.ink2, fontWeight: FontWeight.w800)),
+          );
+      Widget slotLabel(AppLanguage l) => Row(
+            children: [
+              chip(l),
+              const SizedBox(width: AppTokens.s12),
+              Expanded(
+                child: Text(
+                  l.nativeName,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: colors.ink,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
+            ],
+          );
+
+      OutlineInputBorder border(Color color) => OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: color, width: 1.5),
+          );
+
+      return DropdownButtonFormField<AppLanguage>(
+        key: ValueKey('settingsLangDropdown_$slot'),
+        initialValue: value,
+        isExpanded: true,
+        icon: Icon(Icons.arrow_drop_down, color: colors.ink3),
+        items: [
+          for (final l in items)
+            DropdownMenuItem(
+              value: l,
+              child: Container(
+                key: ValueKey('settingsLangItem_${slot}_${l.name}'),
+                constraints: const BoxConstraints(minHeight: 52),
+                alignment: Alignment.centerLeft,
+                child: slotLabel(l),
+              ),
             ),
         ],
+        onChanged: (l) {
+          if (l != null) onChanged(l);
+        },
+        decoration: InputDecoration(
+          constraints: const BoxConstraints(minHeight: 56),
+          filled: true,
+          fillColor: colors.surface2,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: AppTokens.s16),
+          border: border(colors.divider),
+          enabledBorder: border(colors.divider),
+          focusedBorder: border(colors.primary),
+        ),
       );
+    }
+
+    // The device language named for the banner. intl 0.20.2 ships no CLDR
+    // display names and dart:ui `Locale` has no `displayName`, so the name
+    // is the uppercase language code (e.g. "DE", "PL") — unambiguous and
+    // locale-independent. Revisit if a locale-display-name source lands.
+    String deviceLangName() {
+      final locale = controller.deviceLocale;
+      return locale?.languageCode.toUpperCase() ?? '';
     }
 
     return Column(
@@ -318,24 +348,54 @@ class _LanguageSectionState extends State<_LanguageSection> {
             ),
           ],
         ),
-        _SectionTitle(l10n.settingsBaseLangName,
-            subtitle: l10n.settingsBaseLangDesc),
-        picker(controller.mainLang, controller.setMainLang, 'main'),
+        if (controller.deviceLangUnsupported)
+          NoticeBanner(
+              text: l10n.settingsUnsupportedDeviceLang(deviceLangName())),
+        _SectionTitle(l10n.settingsMainLangName,
+            subtitle: l10n.settingsMainLangDesc),
+        dropdownField(
+          slot: 'main',
+          value: controller.mainLang,
+          items: AppLanguage.values,
+          onChanged: controller.setMainLang,
+        ),
         if (_mainHasVoice == false)
           NoticeBanner(
               text: l10n.voiceMissingNamed(controller.mainLang.nativeName)),
         const SizedBox(height: AppTokens.s16),
-        _SectionTitle(l10n.settingsSecondLangName,
-            subtitle: l10n.settingsSecondLangDesc),
-        // No second language yet (pre-dropdown interim): the picker only
-        // exists when a second language is configured.
+        _ToggleRow(
+          switchKey: const ValueKey('settingsSecondLangSwitch'),
+          name: l10n.settingsSecondLangName,
+          desc: l10n.settingsSecondLangDesc,
+          value: controller.secondLang != null,
+          onChanged: controller.setSecondEnabled,
+        ),
         if (controller.secondLang != null) ...[
-          picker(controller.secondLang!, controller.setSecondLang, 'second'),
+          const SizedBox(height: AppTokens.s4),
+          // Q12: no "None" item — the Switch above is the only removal path;
+          // the dropdown never offers the main language.
+          dropdownField(
+            slot: 'second',
+            value: controller.secondLang!,
+            items: [
+              for (final l in AppLanguage.values)
+                if (l != controller.mainLang) l,
+            ],
+            onChanged: controller.setSecondLang,
+          ),
           if (_secondHasVoice == false)
             NoticeBanner(
                 text:
                     l10n.voiceMissingNamed(controller.secondLang!.nativeName)),
-        ],
+        ] else
+          Padding(
+            padding: const EdgeInsets.only(top: AppTokens.s4),
+            child: Text(
+              l10n.settingsSecondOffHint,
+              style:
+                  TextStyle(color: colors.ink3, fontSize: 13, height: 1.4),
+            ),
+          ),
       ],
     );
   }
@@ -404,12 +464,16 @@ class _ToggleRow extends StatelessWidget {
     required this.desc,
     required this.value,
     required this.onChanged,
+    this.switchKey,
   });
 
   final String name;
   final String desc;
   final bool value;
   final ValueChanged<bool>? onChanged;
+
+  /// Optional key for the row's [Switch] (widget tests tap it by key).
+  final Key? switchKey;
 
   @override
   Widget build(BuildContext context) {
@@ -438,7 +502,7 @@ class _ToggleRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppTokens.s16),
-            Switch(value: value, onChanged: onChanged),
+            Switch(key: switchKey, value: value, onChanged: onChanged),
           ],
         ),
       ),
