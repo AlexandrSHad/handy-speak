@@ -165,6 +165,7 @@ class LanguageController extends ChangeNotifier {
   /// delegation — persist-then-notify, so a disable can never leave a stale
   /// `second_lang` key behind (Q18).
   void setSecondEnabled(bool on) {
+    if (on == (_secondLang != null)) return; // no-op guard, sibling idiom
     if (on) {
       _secondLang ??= AppLanguage.values.firstWhere((l) => l != _mainLang);
     } else {

@@ -275,6 +275,23 @@ void main() {
       // Q18-strict: the old cs must not resurrect via storage.
       expect(lang.secondLang, AppLanguage.cs); // default for main=en
     });
+
+    test('a no-op call (on when already on) never notifies', () async {
+      final (lang, _, _, _) = await boot(prefs: {
+        'main_lang': 'en',
+        'second_lang': 'cs',
+        'active_lang': 'en',
+      });
+
+      var notifyCount = 0;
+      lang.addListener(() => notifyCount++);
+
+      lang.setSecondEnabled(true); // already on
+      lang.setSecondEnabled(false);
+      lang.setSecondEnabled(false); // already off — single notify above only
+
+      expect(notifyCount, 1);
+    });
   });
 
   group('LanguageController · setSecondLang guard', () {
