@@ -32,7 +32,7 @@ void runAddendum03Suite() {
 
   group('ADDENDUM-03 · Ukrainian UI chrome', () {
     testWidgets(
-        'with uk active, ARB-driven UI strings render Ukrainian, not English',
+        'with uk main, ARB-driven UI strings render Ukrainian, not English',
         (tester) async {
       // Regression coverage for a real bug caught in review: `uk` must be
       // registered in MaterialApp.supportedLocales, or Flutter's locale
@@ -41,8 +41,10 @@ void runAddendum03Suite() {
       // (keyboard layout, pictograms) switch correctly since they don't go
       // through Localizations at all — a gap the keyboard-only tests above
       // could not have caught.
-      await pumpApp(tester,
-          prefs: {'language': 'uk', 'second_lang': 'uk'});
+      //
+      // ADDENDUM-04 / ADR-0002: chrome follows the MAIN language, so uk must
+      // be seeded as main (a uk *active* language no longer moves chrome).
+      await pumpApp(tester, prefs: {'main_lang': 'uk'});
 
       expect(find.text(uk.settings), findsNothing); // gear icon, not open yet
       expect(find.text(uk.modeMath), findsOneWidget);
@@ -58,8 +60,11 @@ void runAddendum03Suite() {
     testWidgets(
         'uk keyboard renders a permanent digit row and ЙЦУКЕН rows, no 123 key',
         (tester) async {
-      await pumpApp(tester,
-          prefs: {'language': 'uk', 'second_lang': 'uk'});
+      await pumpApp(tester, prefs: {
+        'main_lang': 'en',
+        'second_lang': 'uk',
+        'active_lang': 'uk',
+      });
 
       // Permanent digit row (uk has one, unlike Czech) — never a 123 toggle.
       expect(keyboardText('1'), findsOneWidget);
@@ -77,7 +82,11 @@ void runAddendum03Suite() {
 
     testWidgets('apostrophe key inserts U+02BC and the word stays one tile',
         (tester) async {
-      await pumpApp(tester, prefs: {'language': 'uk', 'second_lang': 'uk'});
+      await pumpApp(tester, prefs: {
+        'main_lang': 'en',
+        'second_lang': 'uk',
+        'active_lang': 'uk',
+      });
 
       // Types "мʼяч" (ball) without ever touching space.
       await tapKey(tester, 'м');
@@ -91,8 +100,9 @@ void runAddendum03Suite() {
     testWidgets('big letters uppercases Cyrillic (ґ→Ґ, є→Є, і→І, ї→Ї)',
         (tester) async {
       await pumpApp(tester, prefs: {
-        'language': 'uk',
+        'main_lang': 'en',
         'second_lang': 'uk',
+        'active_lang': 'uk',
         'big_letters': true,
       });
 
@@ -106,18 +116,27 @@ void runAddendum03Suite() {
   });
 
   group('ADDENDUM-03 · Language pair (top bar)', () {
-    testWidgets('default pair shows exactly EN/CZ, never a third pill',
+    testWidgets('a two-language set shows exactly its two pills, never a third',
         (tester) async {
-      await pumpApp(tester);
+      // ADDENDUM-04: fresh installs start single-language, so the pair must
+      // be seeded explicitly — this test pins the toggle's "exactly the set"
+      // rule, not the default.
+      await pumpApp(tester, prefs: {
+        'main_lang': 'en',
+        'second_lang': 'cs',
+      });
 
       expect(topBarPillText('EN'), findsOneWidget);
       expect(topBarPillText('CZ'), findsOneWidget);
       expect(topBarPillText('UK'), findsNothing);
     });
 
-    testWidgets('a pair including uk shows exactly those two pills',
+    testWidgets('a set including uk shows exactly those two pills',
         (tester) async {
-      await pumpApp(tester, prefs: {'second_lang': 'uk'});
+      await pumpApp(tester, prefs: {
+        'main_lang': 'en',
+        'second_lang': 'uk',
+      });
 
       expect(topBarPillText('EN'), findsOneWidget);
       expect(topBarPillText('UK'), findsOneWidget);
@@ -128,7 +147,10 @@ void runAddendum03Suite() {
   group('ADDENDUM-03 · Settings language pickers', () {
     testWidgets('Base and Second sections each offer all 3 languages',
         (tester) async {
-      await pumpApp(tester);
+      await pumpApp(tester, prefs: {
+        'main_lang': 'en',
+        'second_lang': 'cs',
+      });
       await openSettings(tester);
 
       expect(find.text(en.settingsBaseLangName), findsOneWidget);
@@ -142,15 +164,18 @@ void runAddendum03Suite() {
     testWidgets(
         'picking the second slot\'s language equal to base swaps the pair',
         (tester) async {
-      await pumpApp(tester); // base=en, second=cs
+      await pumpApp(tester, prefs: {
+        'main_lang': 'en',
+        'second_lang': 'cs',
+      }); // main=en, second=cs
       await openSettings(tester);
 
-      // Second picker's "English" row (base's current language) — swaps.
+      // Second picker's "English" row (main's current language) — swaps.
       await tester.tap(find.byKey(const ValueKey('settingsLangPicker_second_en')));
       await tester.pumpAndSettle();
 
-      // Pair swapped: base=cs, second=en. Verify via the top-bar pills,
-      // which mirror the controller's pair directly.
+      // Set swapped: main=cs, second=en. Verify via the top-bar pills,
+      // which mirror the controller's set directly.
       expect(topBarPillText('CZ'), findsOneWidget);
       expect(topBarPillText('EN'), findsOneWidget);
       expect(topBarPillText('UK'), findsNothing);
@@ -158,10 +183,13 @@ void runAddendum03Suite() {
 
     testWidgets('picking a non-conflicting language in the base picker works',
         (tester) async {
-      await pumpApp(tester); // base=en, second=cs
+      await pumpApp(tester, prefs: {
+        'main_lang': 'en',
+        'second_lang': 'cs',
+      }); // main=en, second=cs
       await openSettings(tester);
 
-      await tester.tap(find.byKey(const ValueKey('settingsLangPicker_base_uk')));
+      await tester.tap(find.byKey(const ValueKey('settingsLangPicker_main_uk')));
       await tester.pumpAndSettle();
 
       expect(topBarPillText('UK'), findsOneWidget);
@@ -183,7 +211,10 @@ void runAddendum03Suite() {
         'warns for a pair slot with no matching installed voice, silent for the other',
         (tester) async {
       // Default fake voice list only has en-US/cs-CZ installed.
-      await pumpApp(tester, prefs: {'second_lang': 'uk'}); // pair: en, uk
+      await pumpApp(tester, prefs: {
+        'main_lang': 'en',
+        'second_lang': 'uk',
+      }); // set: en, uk
       await openSettings(tester);
       await tester.pumpAndSettle();
 
@@ -197,7 +228,7 @@ void runAddendum03Suite() {
 
     testWidgets('no warning when every pair slot has a matching voice',
         (tester) async {
-      await pumpApp(tester); // pair: en, cs — both installed by default
+      await pumpApp(tester); // set: en only — main voice installed
       await openSettings(tester);
       await tester.pumpAndSettle();
 
@@ -206,7 +237,10 @@ void runAddendum03Suite() {
 
     testWidgets('manual refresh re-checks and clears a stale warning',
         (tester) async {
-      final app = await pumpApp(tester, prefs: {'second_lang': 'uk'});
+      final app = await pumpApp(tester, prefs: {
+        'main_lang': 'en',
+        'second_lang': 'uk',
+      });
       await openSettings(tester);
       await tester.pumpAndSettle();
       expect(

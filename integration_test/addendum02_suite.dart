@@ -45,7 +45,9 @@ void runAddendum02Suite() {
 
     testWidgets('third pill "Počítání" switches to the board (CS)',
         (tester) async {
-      await pumpApp(tester, prefs: {'language': 'cs'});
+      // Single-language cs install: main (and thus UI chrome + board) is cs
+      // — ADDENDUM-04 keys; chrome follows main per ADR-0002.
+      await pumpApp(tester, prefs: {'main_lang': 'cs'});
       expect(find.text(cs.modeMath), findsOneWidget);
 
       await tester.tap(find.text(cs.modeMath));
@@ -170,7 +172,7 @@ void runAddendum02Suite() {
     });
 
     testWidgets('CS: 12 × 5 = speaks "12 krát 5 rovná se"', (tester) async {
-      final app = await pumpApp(tester, prefs: {'language': 'cs'});
+      final app = await pumpApp(tester, prefs: {'main_lang': 'cs'});
       await enterMath(tester);
 
       await tapMath(tester, '1');
@@ -192,13 +194,13 @@ void runAddendum02Suite() {
       expect(keyboardText('123'), findsNothing);
       expect(keyboardText('ABC'), findsNothing);
 
-      await pumpApp(tester, prefs: {'language': 'cs'});
+      await pumpApp(tester, prefs: {'main_lang': 'cs'});
       expect(keyboardText('123'), findsOneWidget);
     });
 
     testWidgets('tapping 123 swaps the diacritics row to digits in place',
         (tester) async {
-      await pumpApp(tester, prefs: {'language': 'cs'});
+      await pumpApp(tester, prefs: {'main_lang': 'cs'});
       expect(keyboardText('á'), findsOneWidget); // diacritics row visible
       expect(keyboardText('1'), findsNothing);
 
@@ -236,7 +238,11 @@ void runAddendum02Suite() {
 
     testWidgets('EN⇄CS clears the sentence but preserves the math problem',
         (tester) async {
-      await pumpApp(tester);
+      // Two-language set (en main + cs second), starting on the en board.
+      await pumpApp(tester, prefs: {
+        'main_lang': 'en',
+        'second_lang': 'cs',
+      });
       await enterMath(tester);
       await tapMath(tester, '3');
       await tapMath(tester, '+');

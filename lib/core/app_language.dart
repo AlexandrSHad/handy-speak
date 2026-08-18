@@ -44,4 +44,14 @@ enum AppLanguage {
         'uk' => AppLanguage.uk,
         _ => AppLanguage.en,
       };
+
+  /// Matches a device language code (e.g. `PlatformDispatcher`'s
+  /// `locale.languageCode`) against supported languages; null when the
+  /// device language isn't supported (falls back to `en`, ADDENDUM-04 Q7).
+  static AppLanguage? fromDeviceCode(String? code) => switch (code) {
+        'en' => AppLanguage.en,
+        'cs' => AppLanguage.cs,
+        'uk' => AppLanguage.uk,
+        _ => null,
+      };
 }

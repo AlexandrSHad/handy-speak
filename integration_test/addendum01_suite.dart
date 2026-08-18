@@ -151,7 +151,13 @@ void runAddendum01Suite() {
     testWidgets(
         'mode survives the EN→CS switch; Czech accents display uppercase, '
         'insert lowercase', (tester) async {
-      await pumpApp(tester, prefs: {'big_letters': true});
+      // Two-language set (en main + cs second) — the CZ pill only exists
+      // with a second language configured (ADDENDUM-04).
+      await pumpApp(tester, prefs: {
+        'big_letters': true,
+        'main_lang': 'en',
+        'second_lang': 'cs',
+      });
 
       // Switching language clears the message by design (§6.1.1).
       await tester.tap(find.text('CZ'));

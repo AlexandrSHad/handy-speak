@@ -72,6 +72,24 @@ void main() {
     });
   });
 
+  group('AppLanguage.fromDeviceCode', () {
+    // ADDENDUM-04 Q7: device-language seeding. Unlike [AppLanguage.fromKey],
+    // unsupported codes are null (the caller falls back to `en` and raises
+    // the unsupported-device-language banner) rather than silently en.
+    test('supported codes match', () {
+      expect(AppLanguage.fromDeviceCode('en'), AppLanguage.en);
+      expect(AppLanguage.fromDeviceCode('cs'), AppLanguage.cs);
+      expect(AppLanguage.fromDeviceCode('uk'), AppLanguage.uk);
+    });
+    test('unsupported code -> null', () {
+      expect(AppLanguage.fromDeviceCode('de'), isNull);
+      expect(AppLanguage.fromDeviceCode(''), isNull);
+    });
+    test('null code -> null', () {
+      expect(AppLanguage.fromDeviceCode(null), isNull);
+    });
+  });
+
   group('AppLanguage.locale', () {
     test('locale.languageCode matches the enum name for every value', () {
       for (final lang in AppLanguage.values) {

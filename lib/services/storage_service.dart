@@ -16,4 +16,9 @@ class StorageService {
   bool getBool(String key, {required bool fallback}) =>
       _prefs.getBool(key) ?? fallback;
   Future<void> setBool(String key, bool value) => _prefs.setBool(key, value);
+
+  /// Removes [key] entirely. Nullable slots (e.g. the optional second
+  /// language, ADDENDUM-04) rely on *absence* meaning "none" — never an
+  /// encoded empty value.
+  Future<void> remove(String key) => _prefs.remove(key);
 }

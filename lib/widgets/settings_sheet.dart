@@ -134,7 +134,7 @@ class _LanguageSection extends StatefulWidget {
 }
 
 class _LanguageSectionState extends State<_LanguageSection> {
-  bool? _baseHasVoice;
+  bool? _mainHasVoice;
   bool? _secondHasVoice;
   bool _checking = false;
 
@@ -145,7 +145,7 @@ class _LanguageSectionState extends State<_LanguageSection> {
   int _checkGeneration = 0;
 
   LanguageController? _controller;
-  AppLanguage? _lastBase;
+  AppLanguage? _lastMain;
   AppLanguage? _lastSecond;
 
   // Also tracked (not just the pair): SpeechService starts `initializing`
@@ -165,7 +165,7 @@ class _LanguageSectionState extends State<_LanguageSection> {
       _controller?.removeListener(_onPairChanged);
       _controller = controller;
       _controller!.addListener(_onPairChanged);
-      _lastBase = controller.baseLang;
+      _lastMain = controller.mainLang;
       _lastSecond = controller.secondLang;
       shouldCheck = true;
     }
@@ -191,8 +191,8 @@ class _LanguageSectionState extends State<_LanguageSection> {
 
   void _onPairChanged() {
     final c = _controller!;
-    if (c.baseLang != _lastBase || c.secondLang != _lastSecond) {
-      _lastBase = c.baseLang;
+    if (c.mainLang != _lastMain || c.secondLang != _lastSecond) {
+      _lastMain = c.mainLang;
       _lastSecond = c.secondLang;
       _checkVoices();
     }
@@ -209,16 +209,18 @@ class _LanguageSectionState extends State<_LanguageSection> {
   Future<void> _checkVoices() async {
     final generation = ++_checkGeneration;
     final speech = _speech!;
-    final base = _controller!.baseLang;
+    final main = _controller!.mainLang;
     final second = _controller!.secondLang;
     setState(() => _checking = true);
+    // No second language (single-language mode): treat the slot as voiced —
+    // the warning only applies to configured slots.
     final results = await Future.wait([
-      speech.hasVoiceFor(base),
-      speech.hasVoiceFor(second),
+      speech.hasVoiceFor(main),
+      second == null ? Future<bool>.value(true) : speech.hasVoiceFor(second),
     ]);
     if (!mounted || generation != _checkGeneration) return;
     setState(() {
-      _baseHasVoice = results[0];
+      _mainHasVoice = results[0];
       _secondHasVoice = results[1];
       _checking = false;
     });
@@ -318,17 +320,22 @@ class _LanguageSectionState extends State<_LanguageSection> {
         ),
         _SectionTitle(l10n.settingsBaseLangName,
             subtitle: l10n.settingsBaseLangDesc),
-        picker(controller.baseLang, controller.setBaseLang, 'base'),
-        if (_baseHasVoice == false)
+        picker(controller.mainLang, controller.setMainLang, 'main'),
+        if (_mainHasVoice == false)
           NoticeBanner(
-              text: l10n.voiceMissingNamed(controller.baseLang.nativeName)),
+              text: l10n.voiceMissingNamed(controller.mainLang.nativeName)),
         const SizedBox(height: AppTokens.s16),
         _SectionTitle(l10n.settingsSecondLangName,
             subtitle: l10n.settingsSecondLangDesc),
-        picker(controller.secondLang, controller.setSecondLang, 'second'),
-        if (_secondHasVoice == false)
-          NoticeBanner(
-              text: l10n.voiceMissingNamed(controller.secondLang.nativeName)),
+        // No second language yet (pre-dropdown interim): the picker only
+        // exists when a second language is configured.
+        if (controller.secondLang != null) ...[
+          picker(controller.secondLang!, controller.setSecondLang, 'second'),
+          if (_secondHasVoice == false)
+            NoticeBanner(
+                text:
+                    l10n.voiceMissingNamed(controller.secondLang!.nativeName)),
+        ],
       ],
     );
   }

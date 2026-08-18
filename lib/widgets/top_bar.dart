@@ -142,11 +142,11 @@ class _LanguageToggle extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final l10n = AppLocalizations.of(context)!;
-    // Watching (not selecting) because both `language` and the pair-derived
-    // `pair` list are read here — a single ChangeNotifier rebuild covers both.
+    // Watching (not selecting) because both `language` and the set-derived
+    // `set` list are read here — a single ChangeNotifier rebuild covers both.
     final controller = context.watch<LanguageController>();
     final lang = controller.language;
-    final pair = controller.pair;
+    final languages = controller.set;
 
     Widget seg(AppLanguage l) {
       final active = lang == l;
@@ -194,7 +194,7 @@ class _LanguageToggle extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: AppTokens.s8),
               child: Icon(Icons.language, size: 18, color: colors.ink3),
             ),
-            for (final l in pair) seg(l),
+            for (final l in languages) seg(l),
           ],
         ),
       ),
