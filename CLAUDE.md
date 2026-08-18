@@ -10,8 +10,11 @@ Core purpose: Let non-verbal or speech-impaired kids type messages and play
 them back as synthesized speech, so they can communicate with peers
 independently.
 
-The app is **bilingual: English + Czech** (English is the localization
-template; Czech is the secondary locale).
+The app supports **three UI languages: English, Czech, and Ukrainian**
+(English is the localization template; Czech and Ukrainian are secondary
+locales). Children work in a parent-configured language set of one or two
+languages; UI chrome is pinned to the main language (ADR-0002,
+`docs/adr/`).
 
 ## Technology stack
 
@@ -93,5 +96,7 @@ device (web unsupported, no desktop folders).
   and migration list in `docs/forgiving-taps.md`.
 - **Per-feature tracking:** substantial features get an ADDENDUM plan in
   `planning/` paired with an integration-test suite in `integration_test/`
-  (see the `keytap` and `addendum01` pairs). Follow that shape for new work.
+  (see the `keytap` and `addendum01` pairs). Follow that shape for new work
+  via the `handyspeak-suites` skill (`.pi/skills/`) when creating or
+  updating a suite pair.
 - **Brand color:** `#1fa567`. Theme tokens live in `lib/core/theme.dart`.

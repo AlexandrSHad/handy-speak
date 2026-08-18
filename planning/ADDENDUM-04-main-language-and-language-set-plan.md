@@ -108,6 +108,8 @@ List<AppLanguage> get set => [_mainLang, if (_secondLang != null) _secondLang!];
 /// don't move it (Q16 rationale).
 Locale? deviceLocale;  // kept for the banner's {lang} name
 bool deviceLangUnsupported = false;
+// (sketch shown bare for brevity — land as private fields + getters,
+// repo idiom: every other controller field is private with a getter)
 
 void load({Locale? deviceLocale}) {
   final storedMain = _storage.getString(_kMainLang);
@@ -136,33 +138,46 @@ void load({Locale? deviceLocale}) {
 - `setMainLang` = old `setBaseLang` with rename; **keep the swap**
   (`if (next == _secondLang) _secondLang = _mainLang;` — Q12) and the
   orphan snap-back.
-- `setSecondLang` = rename; drop the swap branch's nullability hazards
-  (`next == _mainLang` can't happen — dropdown excludes main — but keep the
-  guard cheap and defensive).
-- New:
+- `setSecondLang` = rename; guard = early-return no-op when
+  `next == _mainLang` (can't happen via UI — dropdown excludes main — but
+  stays cheap and defensive).
+- New (`_persistPair` runs on **both** branches, *before* any
+  `setLanguage` delegation — persist-then-notify, so a disable can never
+  leave a stale `second_lang` key behind (Q18):
 
 ```dart
 /// The only way to remove a second language (Q12). Re-enabling defaults
 /// to the first supported language ≠ main (Q18). Disabling while the
 /// child left the second language active snaps the active language to
-/// main (delegates to setLanguage).
+/// main (delegates to setLanguage, which notifies on its own).
 void setSecondEnabled(bool on) {
   if (on) {
     _secondLang ??= AppLanguage.values.firstWhere((l) => l != _mainLang);
   } else {
     _secondLang = null;
-    if (_language != _mainLang) { setLanguage(_mainLang); return; }
   }
-  _persistPair();
+  _persistPair(); // removes the second_lang key when null (see 2b)
+  if (!on && _language != _mainLang) {
+    setLanguage(_mainLang); // notifies — exactly one notify on this path
+    return;
+  }
   notifyListeners();
 }
 ```
 
-- `_persistPair` writes `main_lang` + `second_lang` (skip write or write
-  empty when null — **remove the key** via `_storage.remove` if the
-  storage API supports it, else write and treat `_loadNullableSlot`'s
-  absence-or-invalid as null; check `StorageService` and pick the variant
-  that keeps "absent = none" unambiguous for Q5/Q18-strictness).
+- `_persistPair` writes `main_lang` and writes `second_lang` only when
+  non-null; when null it **removes the key** via the new
+  `StorageService.remove` (step 2b), so "absent = none" stays literal
+  (Q5/Q18 — decided: no empty-string encoding).
+
+### 2b. Storage: key removal — `lib/services/storage_service.dart`
+
+`StorageService` today has no removal API. Add the thin wrapper (house
+style, mirrors `setString`):
+
+```dart
+Future<void> remove(String key) => _prefs.remove(key);
+```
 - Update the class doc-comment to the new glossary terms; delete all
   "pair"/"base" wording.
 
@@ -172,8 +187,10 @@ void setSecondEnabled(bool on) {
   (ADR-0002). `supportedLocales` (line 84) unchanged.
 - Line 37: pass the device locale into load:
   `..load(deviceLocale: WidgetsBinding.instance.platformDispatcher.locale)`.
-  `MaterialApp` now stops rebuilding on every toggle — only main-language
-  changes rebuild the tree (note in code comment, cites ADR-0002).
+  `MaterialApp`'s **locale stops moving** on every active-language toggle —
+  it now only changes with a main-language change (ADR-0002). The
+  `Consumer2` still rebuilds on every notify (that's how the board flips);
+  the code comment must say "locale stops moving", not "stops rebuilding".
 
 ### 4. Strings — `lib/l10n/app_en.arb`, `app_cs.arb`, `app_uk.arb`
 
@@ -223,9 +240,11 @@ Rework `_LanguageSection` (line 130) / its State:
   banner (reuse `NoticeBanner`; the design's accent tint is a web-only
   refinement — token reuse wins) with
   `l10n.settingsUnsupportedDeviceLang(<deviceLangName>)`. Name via
-  `controller.deviceLocale?.displayName(mainLang.locale)` (intl) — renders
-  e.g. "Deutsch" inside an EN UI; fall back to `languageCode.toUpperCase()`
-  if the platform returns empty.
+  `controller.deviceLocale?.displayName(mainLang.locale)` (intl) — names
+  the device language **in the main language** (an EN UI shows "German"
+  for a `de` device; tests assert non-empty only, since ICU data varies
+  between VM and Android); fall back to `languageCode.toUpperCase()` if
+  the platform returns empty.
 
 ### 6. Top bar — `lib/widgets/top_bar.dart`
 
@@ -237,6 +256,25 @@ Update doc-comment (line 5): "EN/CZ language toggle" → "language-set
 toggle, hidden in single-language mode".
 
 ### 7. Tests
+
+- **F1 — migrate existing suites to the new keys (lands with commit 1;
+  `puro flutter test` stays green at every commit).** Legacy keys silently
+  take the fresh-install path (no `main_lang` → reseed from device locale,
+  null in tests → `en`, and `_persistPair` *removes* the orphaned
+  `second_lang` key):
+  - `addendum02_suite.dart`: `{'language': 'cs'}` →
+    `{'main_lang': 'en', 'second_lang': 'cs', 'active_lang': 'cs'}`
+    (same child state: cs board, en chrome, toggle visible).
+  - `addendum03_suite.dart`: `{'language': 'uk', 'second_lang': 'uk'}` →
+    `{'main_lang': 'en', 'second_lang': 'uk', 'active_lang': 'uk'}` for
+    board-surface assertions; `{'second_lang': 'uk'}` →
+    `{'main_lang': 'en', 'second_lang': 'uk'}` (main_lang present is what
+    keeps it off the fresh-install path).
+  - The "uk active → Ukrainian chrome" test flips meaning under ADR-0002:
+    reseed `{'main_lang': 'uk'}` and retitle to "uk **main** → Ukrainian
+    chrome" — same regression guard (uk in `supportedLocales`), new pin
+    rule. Audit the suites for any other chrome-follows-active assertion
+    while there.
 
 - Extend `test/language_controller_test.dart`: fresh-install seeding
   (device cs → main cs, second null, active cs; unsupported `de` → main en
@@ -255,7 +293,8 @@ toggle, hidden in single-language mode".
 ## Commit sequence
 
 1. `feat(a04): language set in controller + device-language seeding` —
-   steps 1–2 + extended `language_controller_test.dart` (analyze + test).
+   steps 1–2 + extended `language_controller_test.dart` + F1 migration of
+   the addendum02/03 suite seeds (analyze + test).
 2. `feat(a04): ARB strings for main language / language set` — step 4
    (gen-l10n committed).
 3. `feat(a04): pin UI locale to main language (ADR-0002)` — step 3.
