@@ -246,16 +246,17 @@ class _LanguageSectionState extends State<_LanguageSection> {
       required ValueChanged<AppLanguage> onChanged,
     }) {
       Widget chip(AppLanguage l) => Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
               color: colors.surface,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(6),
               border: Border.all(color: colors.divider),
             ),
             child: Text(l.short,
                 style: TextStyle(
-                    color: colors.ink2, fontWeight: FontWeight.w800)),
+                    color: colors.ink2,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800)),
           );
       Widget slotLabel(AppLanguage l) => Row(
             children: [
@@ -284,7 +285,21 @@ class _LanguageSectionState extends State<_LanguageSection> {
         key: ValueKey('settingsLangDropdown_$slot'),
         initialValue: value,
         isExpanded: true,
+        // Rounded menu corners matching the field's 16 px radius.
+        borderRadius: BorderRadius.circular(16),
         icon: Icon(Icons.arrow_drop_down, color: colors.ink3),
+        // Closed state renders its own compact row — NOT the 52 px menu
+        // item, which the decorator's padding would clip. The shared
+        // [chip] keeps the badge pixel-identical in both states.
+        selectedItemBuilder: (_) => [
+          for (final l in items)
+            Container(
+              alignment: Alignment.centerLeft,
+              padding:
+                  const EdgeInsets.symmetric(vertical: AppTokens.s4),
+              child: slotLabel(l),
+            ),
+        ],
         items: [
           for (final l in items)
             DropdownMenuItem(
@@ -302,10 +317,11 @@ class _LanguageSectionState extends State<_LanguageSection> {
         },
         decoration: InputDecoration(
           constraints: const BoxConstraints(minHeight: 56),
+          isDense: true,
           filled: true,
           fillColor: colors.surface2,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: AppTokens.s16),
+          contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppTokens.s16, vertical: AppTokens.s4),
           border: border(colors.divider),
           enabledBorder: border(colors.divider),
           focusedBorder: border(colors.primary),
