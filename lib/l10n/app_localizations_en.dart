@@ -61,14 +61,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsLanguageDesc =>
-      'Pick the two languages shown in the top bar. Tapping one switches the whole board and the speaking voice.';
+      'The app follows the main language. Add a second language to give the child a toggle in the top bar.';
 
   @override
-  String get settingsBaseLangName => 'Base language';
+  String get settingsMainLangName => 'Main language';
 
   @override
-  String get settingsBaseLangDesc =>
-      'Shown first in the top bar; the board starts here.';
+  String get settingsMainLangDesc =>
+      'Menus and app texts are always in this language; it comes first in the top bar.';
 
   @override
   String get settingsSecondLangName => 'Second language';
@@ -76,6 +76,15 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get settingsSecondLangDesc =>
       'The other language the child can flip to.';
+
+  @override
+  String get settingsSecondOffHint =>
+      'One language only — the top bar shows no language toggle.';
+
+  @override
+  String settingsUnsupportedDeviceLang(String lang) {
+    return 'This tablet is set to $lang, which HandySpeak doesn\'t speak yet. Pick any supported language below.';
+  }
 
   @override
   String get settingsVoice => 'Speaking voice';

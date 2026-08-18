@@ -19,11 +19,18 @@
     }
   },
   "settingsLanguage": "Мова",
-  "settingsLanguageDesc": "Обери дві мови для верхньої панелі. Дотик перемикає всю дошку й голос.",
-  "settingsBaseLangName": "Основна мова",
-  "settingsBaseLangDesc": "Перша у верхній панелі; дошка починає з неї.",
+  "settingsLanguageDesc": "Застосунок іде за основною мовою. Друга мова додає дитині перемикач у верхню панель.",
+  "settingsMainLangName": "Основна мова",
+  "settingsMainLangDesc": "Меню й тексти застосунку завжди цією мовою; у верхній панелі вона перша.",
   "settingsSecondLangName": "Друга мова",
   "settingsSecondLangDesc": "Інша мова, на яку дитина може перемкнутися.",
+  "settingsSecondOffHint": "Лише одна мова — перемикача мов у верхній панелі немає.",
+  "settingsUnsupportedDeviceLang": "Планшет налаштовано на мову {lang}, якої HandySpeak ще не знає. Обери нижче будь-яку підтримувану мову.",
+  "@settingsUnsupportedDeviceLang": {
+    "placeholders": {
+      "lang": { "type": "String" }
+    }
+  },
   "settingsVoice": "Голос мовлення",
   "settingsMoodName": "Голоси настрою",
   "settingsMoodDesc": "Дитина може обрати настрій, що змінює висоту й швидкість голосу. Вимкнено = один рівний голос.",

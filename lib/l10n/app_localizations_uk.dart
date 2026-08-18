@@ -63,14 +63,14 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get settingsLanguageDesc =>
-      'Обери дві мови для верхньої панелі. Дотик перемикає всю дошку й голос.';
+      'Застосунок іде за основною мовою. Друга мова додає дитині перемикач у верхню панель.';
 
   @override
-  String get settingsBaseLangName => 'Основна мова';
+  String get settingsMainLangName => 'Основна мова';
 
   @override
-  String get settingsBaseLangDesc =>
-      'Перша у верхній панелі; дошка починає з неї.';
+  String get settingsMainLangDesc =>
+      'Меню й тексти застосунку завжди цією мовою; у верхній панелі вона перша.';
 
   @override
   String get settingsSecondLangName => 'Друга мова';
@@ -78,6 +78,15 @@ class AppLocalizationsUk extends AppLocalizations {
   @override
   String get settingsSecondLangDesc =>
       'Інша мова, на яку дитина може перемкнутися.';
+
+  @override
+  String get settingsSecondOffHint =>
+      'Лише одна мова — перемикача мов у верхній панелі немає.';
+
+  @override
+  String settingsUnsupportedDeviceLang(String lang) {
+    return 'Планшет налаштовано на мову $lang, якої HandySpeak ще не знає. Обери нижче будь-яку підтримувану мову.';
+  }
 
   @override
   String get settingsVoice => 'Голос мовлення';

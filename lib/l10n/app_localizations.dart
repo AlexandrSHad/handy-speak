@@ -187,20 +187,20 @@ abstract class AppLocalizations {
   /// No description provided for @settingsLanguageDesc.
   ///
   /// In en, this message translates to:
-  /// **'Pick the two languages shown in the top bar. Tapping one switches the whole board and the speaking voice.'**
+  /// **'The app follows the main language. Add a second language to give the child a toggle in the top bar.'**
   String get settingsLanguageDesc;
 
-  /// No description provided for @settingsBaseLangName.
+  /// No description provided for @settingsMainLangName.
   ///
   /// In en, this message translates to:
-  /// **'Base language'**
-  String get settingsBaseLangName;
+  /// **'Main language'**
+  String get settingsMainLangName;
 
-  /// No description provided for @settingsBaseLangDesc.
+  /// No description provided for @settingsMainLangDesc.
   ///
   /// In en, this message translates to:
-  /// **'Shown first in the top bar; the board starts here.'**
-  String get settingsBaseLangDesc;
+  /// **'Menus and app texts are always in this language; it comes first in the top bar.'**
+  String get settingsMainLangDesc;
 
   /// No description provided for @settingsSecondLangName.
   ///
@@ -213,6 +213,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The other language the child can flip to.'**
   String get settingsSecondLangDesc;
+
+  /// No description provided for @settingsSecondOffHint.
+  ///
+  /// In en, this message translates to:
+  /// **'One language only — the top bar shows no language toggle.'**
+  String get settingsSecondOffHint;
+
+  /// No description provided for @settingsUnsupportedDeviceLang.
+  ///
+  /// In en, this message translates to:
+  /// **'This tablet is set to {lang}, which HandySpeak doesn\'t speak yet. Pick any supported language below.'**
+  String settingsUnsupportedDeviceLang(String lang);
 
   /// No description provided for @settingsVoice.
   ///

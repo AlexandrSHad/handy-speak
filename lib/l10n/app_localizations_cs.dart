@@ -62,14 +62,14 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get settingsLanguageDesc =>
-      'Vyber dva jazyky zobrazené v horní liště. Ťuknutí přepne celou tabulku i mluvící hlas.';
+      'Aplikace se řídí hlavním jazykem. Druhý jazyk přidá dítěti přepínač do horní lišty.';
 
   @override
-  String get settingsBaseLangName => 'Základní jazyk';
+  String get settingsMainLangName => 'Hlavní jazyk';
 
   @override
-  String get settingsBaseLangDesc =>
-      'V horní liště je první; tabulka jím začíná.';
+  String get settingsMainLangDesc =>
+      'Nabídky a texty aplikace jsou vždy v tomto jazyce; v horní liště je první.';
 
   @override
   String get settingsSecondLangName => 'Druhý jazyk';
@@ -77,6 +77,15 @@ class AppLocalizationsCs extends AppLocalizations {
   @override
   String get settingsSecondLangDesc =>
       'Druhý jazyk, na který dítě může přepnout.';
+
+  @override
+  String get settingsSecondOffHint =>
+      'Jen jeden jazyk — přepínač jazyků se v horní liště nezobrazuje.';
+
+  @override
+  String settingsUnsupportedDeviceLang(String lang) {
+    return 'Tablet je nastavený na jazyk $lang, který HandySpeak zatím neumí. Níže vyber kterýkoli podporovaný jazyk.';
+  }
 
   @override
   String get settingsVoice => 'Mluvený hlas';

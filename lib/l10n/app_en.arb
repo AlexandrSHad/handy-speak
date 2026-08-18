@@ -19,11 +19,18 @@
     }
   },
   "settingsLanguage": "Language",
-  "settingsLanguageDesc": "Pick the two languages shown in the top bar. Tapping one switches the whole board and the speaking voice.",
-  "settingsBaseLangName": "Base language",
-  "settingsBaseLangDesc": "Shown first in the top bar; the board starts here.",
+  "settingsLanguageDesc": "The app follows the main language. Add a second language to give the child a toggle in the top bar.",
+  "settingsMainLangName": "Main language",
+  "settingsMainLangDesc": "Menus and app texts are always in this language; it comes first in the top bar.",
   "settingsSecondLangName": "Second language",
   "settingsSecondLangDesc": "The other language the child can flip to.",
+  "settingsSecondOffHint": "One language only — the top bar shows no language toggle.",
+  "settingsUnsupportedDeviceLang": "This tablet is set to {lang}, which HandySpeak doesn't speak yet. Pick any supported language below.",
+  "@settingsUnsupportedDeviceLang": {
+    "placeholders": {
+      "lang": { "type": "String" }
+    }
+  },
   "settingsVoice": "Speaking voice",
   "settingsMoodName": "Mood voices",
   "settingsMoodDesc": "Let the child pick a mood that changes the voice's pitch and speed. Off uses one steady voice.",

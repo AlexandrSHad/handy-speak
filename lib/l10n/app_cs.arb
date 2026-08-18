@@ -19,11 +19,18 @@
     }
   },
   "settingsLanguage": "Jazyk",
-  "settingsLanguageDesc": "Vyber dva jazyky zobrazené v horní liště. Ťuknutí přepne celou tabulku i mluvící hlas.",
-  "settingsBaseLangName": "Základní jazyk",
-  "settingsBaseLangDesc": "V horní liště je první; tabulka jím začíná.",
+  "settingsLanguageDesc": "Aplikace se řídí hlavním jazykem. Druhý jazyk přidá dítěti přepínač do horní lišty.",
+  "settingsMainLangName": "Hlavní jazyk",
+  "settingsMainLangDesc": "Nabídky a texty aplikace jsou vždy v tomto jazyce; v horní liště je první.",
   "settingsSecondLangName": "Druhý jazyk",
   "settingsSecondLangDesc": "Druhý jazyk, na který dítě může přepnout.",
+  "settingsSecondOffHint": "Jen jeden jazyk — přepínač jazyků se v horní liště nezobrazuje.",
+  "settingsUnsupportedDeviceLang": "Tablet je nastavený na jazyk {lang}, který HandySpeak zatím neumí. Níže vyber kterýkoli podporovaný jazyk.",
+  "@settingsUnsupportedDeviceLang": {
+    "placeholders": {
+      "lang": { "type": "String" }
+    }
+  },
   "settingsVoice": "Mluvený hlas",
   "settingsMoodName": "Nálady hlasu",
   "settingsMoodDesc": "Dítě si může vybrat náladu, která mění výšku a rychlost hlasu. Vypnuto = jeden stálý hlas.",
