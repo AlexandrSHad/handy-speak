@@ -235,102 +235,6 @@ class _LanguageSectionState extends State<_LanguageSection> {
     final l10n = AppLocalizations.of(context)!;
     final controller = context.watch<LanguageController>();
 
-    // Dropdown field in the sheet's card idiom (`.a04-select`): surface2
-    // fill, 16 px radius, 1.5 px divider border (primary when focused),
-    // 56 px tall (AAC target). Items render the chip + endonym anatomy
-    // (`.a04-chip`) at a 52 px minimum height.
-    Widget dropdownField({
-      required String slot,
-      required AppLanguage value,
-      required List<AppLanguage> items,
-      required ValueChanged<AppLanguage> onChanged,
-    }) {
-      Widget chip(AppLanguage l) => Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-            decoration: BoxDecoration(
-              color: colors.surface,
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: colors.divider),
-            ),
-            child: Text(l.short,
-                style: TextStyle(
-                    color: colors.ink2,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800)),
-          );
-      Widget slotLabel(AppLanguage l) => Row(
-            children: [
-              chip(l),
-              const SizedBox(width: AppTokens.s12),
-              Expanded(
-                child: Text(
-                  l.nativeName,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: colors.ink,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          );
-
-      OutlineInputBorder border(Color color) => OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: color, width: 1.5),
-          );
-
-      return DropdownButtonFormField<AppLanguage>(
-        key: ValueKey('settingsLangDropdown_$slot'),
-        initialValue: value,
-        isExpanded: true,
-        // Rounded menu corners matching the field's 16 px radius.
-        borderRadius: BorderRadius.circular(16),
-        icon: Icon(Icons.arrow_drop_down, color: colors.ink3),
-        // Closed state renders its own row — NOT the 52 px menu item, which
-        // the decorator's padding would clip. The row is a bare 16 px text
-        // line (badge kept inside the line box), so the field sizes from
-        // the SAME decorator metrics + text-line driver as the other
-        // inputs — it grows with system text scale instead of sitting at a
-        // fixed 56 while every other input grows around it.
-        selectedItemBuilder: (_) => [
-          for (final l in items)
-            Container(
-              alignment: Alignment.centerLeft,
-              child: slotLabel(l),
-            ),
-        ],
-        items: [
-          for (final l in items)
-            DropdownMenuItem(
-              value: l,
-              child: Container(
-                key: ValueKey('settingsLangItem_${slot}_${l.name}'),
-                constraints: const BoxConstraints(minHeight: 52),
-                alignment: Alignment.centerLeft,
-                child: slotLabel(l),
-              ),
-            ),
-        ],
-        onChanged: (l) {
-          if (l != null) onChanged(l);
-        },
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: colors.surface2,
-          // Vertical padding mirrors the sheet's other input (the phrase
-          // field's default decorator metrics) so both grow identically
-          // with text scale; pinned by the addendum04 height tests.
-          contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppTokens.s16, vertical: 16),
-          border: border(colors.divider),
-          enabledBorder: border(colors.divider),
-          focusedBorder: border(colors.primary),
-        ),
-      );
-    }
-
     // The device language named for the banner. intl 0.20.2 ships no CLDR
     // display names and dart:ui `Locale` has no `displayName`, so the name
     // is the uppercase language code (e.g. "DE", "PL") — unambiguous and
@@ -371,7 +275,7 @@ class _LanguageSectionState extends State<_LanguageSection> {
               text: l10n.settingsUnsupportedDeviceLang(deviceLangName())),
         _SectionTitle(l10n.settingsMainLangName,
             subtitle: l10n.settingsMainLangDesc),
-        dropdownField(
+        _LanguageDropdownField(
           slot: 'main',
           value: controller.mainLang,
           items: AppLanguage.values,
@@ -392,7 +296,7 @@ class _LanguageSectionState extends State<_LanguageSection> {
           const SizedBox(height: AppTokens.s4),
           // Q12: no "None" item — the Switch above is the only removal path;
           // the dropdown never offers the main language.
-          dropdownField(
+          _LanguageDropdownField(
             slot: 'second',
             value: controller.secondLang!,
             items: [
@@ -415,6 +319,114 @@ class _LanguageSectionState extends State<_LanguageSection> {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// A language-set slot dropdown (ADDENDUM-04) in the app-wide card-input
+/// idiom — the theme's `InputDecorationTheme` supplies fill, radius and
+/// borders; this widget owns the dropdown-specific anatomy.
+///
+/// Invariants to copy for any future dropdown:
+/// - **Never pin the field to a fixed height, never pad the closed row.**
+///   The closed state is a BARE text line (badge sized inside the line
+///   box), so the field sizes from the same decorator metrics + text-line
+///   driver as every other input and grows with system text scale.
+///   Accessibility font scaling is common on this app's tablets; a fixed
+///   height makes the field look shrunken next to inputs that scale.
+///   Pinned by the addendum04 height tests (dropdown == phrase input at
+///   text scales 1.0 and 1.3).
+/// - The vertical contentPadding (16) pairs the dropdown's smaller
+///   intrinsic button with the theme-default TextField metrics so both
+///   land on equal heights. If input metrics ever change, re-run those
+///   tests.
+/// - Menu items keep a 52 px minimum (AAC tap target); the menu rounds to
+///   the field radius; items render the short-code chip + endonym, never
+///   flags (design rule).
+/// - Test keys: `settingsLangDropdown_{slot}` on the field,
+///   `settingsLangItem_{slot}_{lang}` per menu item.
+class _LanguageDropdownField extends StatelessWidget {
+  const _LanguageDropdownField({
+    required this.slot,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  final String slot;
+  final AppLanguage value;
+  final List<AppLanguage> items;
+  final ValueChanged<AppLanguage> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+
+    Widget chip(AppLanguage l) => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: colors.divider),
+          ),
+          child: Text(l.short,
+              style: TextStyle(
+                  color: colors.ink2,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800)),
+        );
+    Widget slotLabel(AppLanguage l) => Row(
+          children: [
+            chip(l),
+            const SizedBox(width: AppTokens.s12),
+            Expanded(
+              child: Text(
+                l.nativeName,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: colors.ink,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+
+    return DropdownButtonFormField<AppLanguage>(
+      key: ValueKey('settingsLangDropdown_$slot'),
+      initialValue: value,
+      isExpanded: true,
+      borderRadius: BorderRadius.circular(AppTokens.rInput),
+      icon: Icon(Icons.arrow_drop_down, color: colors.ink3),
+      // Closed state renders its own bare text line — NOT the 52 px menu
+      // item, which the decorator's padding would clip (see class docs).
+      selectedItemBuilder: (_) => [
+        for (final l in items)
+          Container(
+            alignment: Alignment.centerLeft,
+            child: slotLabel(l),
+          ),
+      ],
+      items: [
+        for (final l in items)
+          DropdownMenuItem(
+            value: l,
+            child: Container(
+              key: ValueKey('settingsLangItem_${slot}_${l.name}'),
+              constraints: const BoxConstraints(minHeight: 52),
+              alignment: Alignment.centerLeft,
+              child: slotLabel(l),
+            ),
+          ),
+      ],
+      onChanged: (l) {
+        if (l != null) onChanged(l);
+      },
+      decoration: const InputDecoration(
+        contentPadding: EdgeInsets.symmetric(
+            horizontal: AppTokens.s16, vertical: 16),
+      ),
     );
   }
 }
@@ -631,19 +643,7 @@ class _PhrasesSectionState extends State<_PhrasesSection> {
                 controller: _controller,
                 textInputAction: TextInputAction.done,
                 onSubmitted: (_) => add(),
-                decoration: InputDecoration(
-                  hintText: l10n.settingsAddPhrase,
-                  filled: true,
-                  fillColor: colors.surface2,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: colors.divider),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: colors.divider),
-                  ),
-                ),
+                decoration: InputDecoration(hintText: l10n.settingsAddPhrase),
               ),
             ),
             const SizedBox(width: AppTokens.s8),

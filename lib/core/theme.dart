@@ -201,6 +201,9 @@ class AppTokens {
 
   // Radii.
   static const double rKey = 18;
+  /// Form-input radius (the "card input" idiom — filled field, 16 px
+  /// corners); smaller than cards.
+  static const double rInput = 16;
   static const double rCard = 22;
   static const double rMessage = 24;
   static const double rPill = 999;
@@ -219,12 +222,32 @@ class AppTheme {
 
   static ThemeData _build(AppColors c, Brightness brightness) {
     final base = ThemeData(brightness: brightness, useMaterial3: true);
+    OutlineInputBorder inputBorder(Color color) => OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppTokens.rInput),
+          borderSide: BorderSide(color: color, width: 1.5),
+        );
     return base.copyWith(
       scaffoldBackgroundColor: c.bg,
       colorScheme: base.colorScheme.copyWith(
         primary: c.primary,
         surface: c.surface,
         brightness: brightness,
+      ),
+      // The app-wide "card input" idiom (ADDENDUM-04): filled surface2,
+      // 16 px corners, 1.5 px divider border going primary on focus.
+      // Every TextField / dropdown inherits it — never hand-roll
+      // InputDecoration chrome per field. Deliberately NO contentPadding
+      // here: a theme-level padding would override the per-metier defaults
+      // (plain TextFields size from Flutter's default metrics; dropdowns
+      // pair their own with a vertical padding — see
+      // `_LanguageDropdownField`). Setting a partial padding here would
+      // zero the vertical for fields that rely on defaults.
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: c.surface2,
+        border: inputBorder(c.divider),
+        enabledBorder: inputBorder(c.divider),
+        focusedBorder: inputBorder(c.primary),
       ),
       extensions: [c],
       textTheme: base.textTheme.apply(

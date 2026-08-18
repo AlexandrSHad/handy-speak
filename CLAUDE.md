@@ -99,4 +99,10 @@ device (web unsupported, no desktop folders).
   (see the `keytap` and `addendum01` pairs). Follow that shape for new work
   via the `handyspeak-suites` skill (`.pi/skills/`) when creating or
   updating a suite pair.
+- **Inputs:** the card-input idiom (surface2 fill, 16 px radius, divider
+  border → primary on focus) lives in `AppTheme`'s `InputDecorationTheme`
+  — never hand-roll `InputDecoration` chrome per field. Dropdowns follow
+  the `_LanguageDropdownField` recipe in `lib/widgets/settings_sheet.dart`
+  (closed state = bare text line; never fixed heights — inputs must grow
+  with system text scale; parity pinned by the addendum04 height tests).
 - **Brand color:** `#1fa567`. Theme tokens live in `lib/core/theme.dart`.
