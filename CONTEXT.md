@@ -42,3 +42,43 @@ voice matches a language set slot. Checked when Settings opens and on manual
 refresh; never blocks composing or Speak (the engine falls back to a default
 voice).
 _Avoid_: voice missing, TTS warning
+
+## Settings
+
+**Settings dialog**:
+The single surface where a parent adjusts the app. A popup dialog by
+nature; on screens too small to frame it, it presents full-screen — that
+is a change of presentation, never a change of identity, so it is called
+the Settings dialog in both. Divided into categories.
+_Avoid_: settings sheet, settings screen, settings page, settings modal
+
+**Setting**:
+One parent-controlled preference. Every setting in the app is a parent
+setting — there is no child-facing settings tier and no access control on
+reaching them. A future parent companion app may take some over; until
+then the distinction does not exist and must not be modelled.
+_Avoid_: parent setting, child setting, advanced setting
+
+**Category**:
+A top-level division of the Settings dialog. Exactly one category is
+visible at a time; the others are reached by an explicit navigation
+choice. A category groups one or more sections around a single concern.
+Unqualified "category" in prose means this one; the board's word groups
+are symbol categories. Code qualifies both (`SettingsCategory`,
+`SymbolCategory`).
+_Avoid_: tab, page, screen
+
+**Section**:
+A titled group of related settings inside a category, with an optional
+explanatory subtitle. Sections never nest and are never navigable — they
+scroll with the category that contains them.
+_Avoid_: group, panel, block
+
+## Board
+
+**Symbol category**:
+One of the eight fixed groups a pictogram belongs to on the symbol board
+(Feelings, Food, School, Family, Activities, Places, Numbers, Hello),
+selected one at a time from the board's left rail. A child-facing concept,
+unrelated to the Settings dialog's categories.
+_Avoid_: category (unqualified), pictogram group, symbol group, topic
