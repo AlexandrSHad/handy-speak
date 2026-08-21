@@ -11,7 +11,7 @@ import 'math_board.dart';
 import 'message_bar.dart';
 import 'notice_banner.dart';
 import 'phrase_strip.dart';
-import 'settings_sheet.dart';
+import 'settings_dialog.dart';
 import 'symbol_board.dart';
 import 'top_bar.dart';
 
@@ -33,7 +33,7 @@ class HomePage extends StatelessWidget {
           padding: const EdgeInsets.all(AppTokens.s16),
           child: Column(
             children: [
-              TopBar(onOpenSettings: () => showSettingsSheet(context)),
+              TopBar(onOpenSettings: () => showSettingsDialog(context)),
               const SizedBox(height: AppTokens.s16),
               const MessageBar(),
               const SizedBox(height: AppTokens.s12),
