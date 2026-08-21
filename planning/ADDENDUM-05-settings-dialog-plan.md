@@ -343,6 +343,12 @@ Assertions:
   deliberately not reconstructed; ADR-0003 and this plan carry the record.
 - Renaming suites off their ADDENDUM numbers — a standing wish, still not
   this change.
+- **Dialog-scoped session state.** The phrase draft and the voice-probe
+  fields are kept alive by the `IndexedStack` holding the panes mounted — the
+  right lifetime, obtained as a side effect rather than declared. They belong
+  in an object owned by `_SettingsDialogState` and passed to the panes; the
+  natural moment is the split of the ~1000-line `settings_dialog.dart`, with
+  the Language section moving to its own file.
 
 ## Critical files
 

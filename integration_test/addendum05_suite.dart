@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:handy_speak/core/app_language.dart';
 import 'package:handy_speak/core/theme.dart';
 import 'package:handy_speak/l10n/app_localizations_cs.dart';
 import 'package:handy_speak/l10n/app_localizations_en.dart';
@@ -109,6 +110,68 @@ void runAddendum05Suite() {
       await openCategory(tester, 'language');
       expectLanguagePane(en);
       expectRailIntact(en);
+    });
+  });
+
+  // The panes are held in an `IndexedStack`, not swapped by a `switch`, so a
+  // rail tap hides a pane instead of disposing it. These pin the two things
+  // that behaviour buys back from the bottom sheet this replaced — both were
+  // silently lost while the pane was chosen by type.
+  group('ADDENDUM-05 · Pane state', () {
+    testWidgets('a half-typed phrase survives a category round-trip',
+        (tester) async {
+      await pumpApp(tester, prefs: {'main_lang': 'en'});
+      await openSettings(tester);
+      await openCategory(tester, 'phrases');
+
+      const draft = 'Can I have a break';
+      await tester.enterText(addPhraseField(), draft);
+      await tester.pumpAndSettle();
+      expect(phraseDraft(tester), draft);
+
+      // Deliberately no Add tap: the draft exists only in the pane's own
+      // `TextEditingController`, which a remount would dispose.
+      await openCategory(tester, 'language');
+      await openCategory(tester, 'phrases');
+
+      expect(phraseDraft(tester), draft,
+          reason: 'the add field was emptied by the category round-trip — '
+              'the Phrases pane was remounted instead of merely hidden');
+      // Still a draft, not a phrase: nothing was committed on the way past.
+      expect(
+        readProvider<PhrasesController>(tester)
+            .phrasesFor(AppLanguage.en)
+            .map((p) => p.text),
+        isNot(contains(draft)),
+      );
+    });
+
+    testWidgets('the voice check runs once per dialog open, not per visit',
+        (tester) async {
+      final app = await pumpApp(tester, prefs: {'main_lang': 'en'});
+
+      // Baseline taken AFTER the open, not assumed to be zero: the probe is
+      // `SpeechService.hasVoiceFor`, which reaches the engine through the
+      // `getVoices` channel method, and other code may reach it too.
+      await openSettings(tester);
+      final onOpen = app.tts.callCount('getVoices');
+      expect(onOpen, greaterThan(0),
+          reason: 'the Language pane is expected to probe once on open — if '
+              'it never probes, this test can no longer detect a re-probe');
+
+      await openCategory(tester, 'phrases');
+      await openCategory(tester, 'language');
+
+      expect(app.tts.callCount('getVoices'), onOpen,
+          reason: 'returning to Language re-ran the voice probe: a TTS '
+              'round-trip per configured slot plus a spinner flash in the '
+              'refresh button, on every single visit');
+
+      // The contract is once per *open*, not once ever: a fresh dialog does
+      // re-check, which is how a voice pack installed meanwhile is noticed.
+      await closeSettings(tester, en.closeLabel);
+      await openSettings(tester);
+      expect(app.tts.callCount('getVoices'), greaterThan(onOpen));
     });
   });
 
@@ -394,6 +457,12 @@ class FakeTts {
 
   List<Map<String, String>> voices = List.of(_defaultVoices);
 
+  /// How many times [method] has been invoked so far. Tests that care about
+  /// *re*-work (a probe repeating on every category visit) diff this rather
+  /// than asserting an absolute count.
+  int callCount(String method) =>
+      calls.where((c) => c.method == method).length;
+
   List<String> get spokenTexts => [
         for (final call in calls)
           if (call.method == 'speak')
@@ -514,6 +583,17 @@ Finder paneScrollable() => find.descendant(
 Finder dialogSurface() =>
     find.descendant(of: find.byType(Dialog), matching: find.byType(Material))
         .first;
+
+/// The Phrases pane's pinned add field, by test key — the Language pane is
+/// mounted alongside it, so `find.byType(TextField)` is no longer a safe way
+/// to name it.
+Finder addPhraseField() =>
+    find.byKey(const ValueKey('settingsAddPhraseField'));
+
+/// What is currently typed into the add field — the field's own contents, not
+/// merely "some Text with this string exists somewhere".
+String phraseDraft(WidgetTester tester) =>
+    tester.widget<TextField>(addPhraseField()).controller!.text;
 
 /// The [Switch] sitting in the same toggle row as the [name] label.
 Finder toggleSwitch(String name) => find.descendant(

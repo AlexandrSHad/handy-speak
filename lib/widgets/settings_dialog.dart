@@ -79,11 +79,43 @@ class _SettingsDialogState extends State<_SettingsDialog> {
         ),
         VerticalDivider(width: 1, thickness: 1, color: colors.divider),
         Expanded(
-          child: switch (_category) {
-            SettingsCategory.language => const _LanguagePane(),
-            SettingsCategory.phrases => const _PhrasesPane(),
-            SettingsCategory.accessibility => const _AccessibilityPane(),
-          },
+          // All three panes stay MOUNTED and the stack just picks one to
+          // show. A `switch` here returns a different widget type per
+          // category, so every rail tap disposes the old pane's State: a
+          // half-typed phrase in the add field is thrown away, and
+          // `_LanguageSectionState.didChangeDependencies` re-fires
+          // `_checkVoices()` on a fresh State every single time Language is
+          // revisited — a `hasVoiceFor` TTS round-trip per configured slot
+          // plus a spinner flash in the refresh button. The bottom sheet
+          // this replaced had every section mounted at once and did neither;
+          // keeping the panes alive restores that behaviour.
+          //
+          // Safe for AAC: `RenderIndexedStack.visitChildrenForSemantics`
+          // visits only the displayed child (verified in the Flutter 3.44
+          // SDK), so the hidden panes are never announced by a screen
+          // reader. `_IndexedStackElement.debugVisitOnstageChildren` does the
+          // same for the element tree, which is why the suites' default
+          // `skipOffstage` finders still see exactly one pane. Focus follows
+          // too: hidden children sit under `ExcludeFocus`, so the add field
+          // gives up focus when Phrases is hidden and keeps only its text.
+          // The children MUST stay in `SettingsCategory` declaration order —
+          // `index` is the enum's `.index`.
+          //
+          // Deferred: what this actually preserves is dialog-scoped session
+          // state (the phrase draft, the voice-probe fields), and
+          // `IndexedStack` gets that lifetime as a side effect of keeping
+          // widgets alive rather than by saying so. The honest shape is an
+          // object owned by `_SettingsDialogState` and handed to the panes.
+          // The natural moment is when this ~1000-line file gets the
+          // Language section extracted into its own file.
+          child: IndexedStack(
+            index: _category.index,
+            children: const [
+              _LanguagePane(),
+              _PhrasesPane(),
+              _AccessibilityPane(),
+            ],
+          ),
         ),
       ],
     );
@@ -979,6 +1011,7 @@ class _PhrasesPaneState extends State<_PhrasesPane> {
                 children: [
                   Expanded(
                     child: TextField(
+                      key: const ValueKey('settingsAddPhraseField'),
                       controller: _controller,
                       textInputAction: TextInputAction.done,
                       onSubmitted: (_) => add(),
