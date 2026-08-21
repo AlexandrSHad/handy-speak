@@ -66,6 +66,9 @@ class AppLocalizationsUk extends AppLocalizations {
       'Застосунок іде за основною мовою. Друга мова додає дитині перемикач у верхню панель.';
 
   @override
+  String get settingsLanguageSet => 'Набір мов';
+
+  @override
   String get settingsMainLangName => 'Основна мова';
 
   @override
@@ -99,7 +102,11 @@ class AppLocalizationsUk extends AppLocalizations {
       'Дитина може обрати настрій, що змінює висоту й швидкість голосу. Вимкнено = один рівний голос.';
 
   @override
-  String get settingsPhrases => 'Батьки · Фрази';
+  String get settingsPhrases => 'Фрази';
+
+  @override
+  String get settingsPhrasesDesc =>
+      'Швидкі речення, які дитина скаже одним дотиком. Кожна мова має власний список.';
 
   @override
   String get settingsUsed => 'вжито';
@@ -118,6 +125,10 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get settingsAccessibility => 'Доступність';
+
+  @override
+  String get settingsAccessibilityDesc =>
+      'Як дошка виглядає та реагує. Діє для обох мов.';
 
   @override
   String get settingsHapticName => 'Вібрація';

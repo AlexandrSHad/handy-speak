@@ -64,6 +64,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'The app follows the main language. Add a second language to give the child a toggle in the top bar.';
 
   @override
+  String get settingsLanguageSet => 'Language set';
+
+  @override
   String get settingsMainLangName => 'Main language';
 
   @override
@@ -97,7 +100,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Let the child pick a mood that changes the voice\'s pitch and speed. Off uses one steady voice.';
 
   @override
-  String get settingsPhrases => 'Parent · Phrases';
+  String get settingsPhrases => 'Phrases';
+
+  @override
+  String get settingsPhrasesDesc =>
+      'Quick sentences the child can speak with one tap. Each language keeps its own list.';
 
   @override
   String get settingsUsed => 'used';
@@ -116,6 +123,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsAccessibility => 'Accessibility';
+
+  @override
+  String get settingsAccessibilityDesc =>
+      'How the board looks and feels. These apply to both languages.';
 
   @override
   String get settingsHapticName => 'Haptic feedback';

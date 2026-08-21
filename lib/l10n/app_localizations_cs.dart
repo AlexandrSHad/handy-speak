@@ -65,6 +65,9 @@ class AppLocalizationsCs extends AppLocalizations {
       'Aplikace se řídí hlavním jazykem. Druhý jazyk přidá dítěti přepínač do horní lišty.';
 
   @override
+  String get settingsLanguageSet => 'Sada jazyků';
+
+  @override
   String get settingsMainLangName => 'Hlavní jazyk';
 
   @override
@@ -98,7 +101,11 @@ class AppLocalizationsCs extends AppLocalizations {
       'Dítě si může vybrat náladu, která mění výšku a rychlost hlasu. Vypnuto = jeden stálý hlas.';
 
   @override
-  String get settingsPhrases => 'Rodič · Fráze';
+  String get settingsPhrases => 'Fráze';
+
+  @override
+  String get settingsPhrasesDesc =>
+      'Rychlé věty, které dítě řekne jedním ťuknutím. Každý jazyk má vlastní seznam.';
 
   @override
   String get settingsUsed => 'použito';
@@ -117,6 +124,10 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get settingsAccessibility => 'Přístupnost';
+
+  @override
+  String get settingsAccessibilityDesc =>
+      'Jak tabulka vypadá a reaguje. Platí pro oba jazyky.';
 
   @override
   String get settingsHapticName => 'Vibrace';

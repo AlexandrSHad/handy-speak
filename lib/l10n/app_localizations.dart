@@ -190,6 +190,12 @@ abstract class AppLocalizations {
   /// **'The app follows the main language. Add a second language to give the child a toggle in the top bar.'**
   String get settingsLanguageDesc;
 
+  /// No description provided for @settingsLanguageSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Language set'**
+  String get settingsLanguageSet;
+
   /// No description provided for @settingsMainLangName.
   ///
   /// In en, this message translates to:
@@ -247,8 +253,14 @@ abstract class AppLocalizations {
   /// No description provided for @settingsPhrases.
   ///
   /// In en, this message translates to:
-  /// **'Parent · Phrases'**
+  /// **'Phrases'**
   String get settingsPhrases;
+
+  /// No description provided for @settingsPhrasesDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick sentences the child can speak with one tap. Each language keeps its own list.'**
+  String get settingsPhrasesDesc;
 
   /// No description provided for @settingsUsed.
   ///
@@ -285,6 +297,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Accessibility'**
   String get settingsAccessibility;
+
+  /// No description provided for @settingsAccessibilityDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'How the board looks and feels. These apply to both languages.'**
+  String get settingsAccessibilityDesc;
 
   /// No description provided for @settingsHapticName.
   ///
