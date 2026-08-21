@@ -166,12 +166,15 @@ void runAddendum03Suite() {
         expect(find.byKey(ValueKey('settingsLangItem_main_${l.name}')),
             findsWidgets);
       }
-      // Tap outside the menu to close it without changing anything.
-      // (640, 30) is above the Settings dialog's own frame — but it is the
-      // OPEN MENU that gets dismissed, not the dialog: the dropdown menu is
-      // its own route whose full-screen barrier sits above the dialog and
-      // swallows this tap. Safe as-is; do not "fix" it into a scrim tap.
-      await tester.tapAt(const Offset(640, 30));
+      // Tap outside the menu to close it without changing anything. Only the
+      // MENU closes: the dropdown menu is its own route whose full-screen
+      // barrier sits above the dialog and swallows this tap. The point is
+      // kept INSIDE the dialog frame (x 192–1088 / y 88–712 at the harness
+      // default 1280×800) on pane-header whitespace between the title and the
+      // close X, so should the menu ever stop being a barrier route this
+      // degrades to an inert tap on the pane — never to a scrim tap that
+      // silently dismisses the dialog.
+      await tester.tapAt(const Offset(900, 120));
       await tester.pumpAndSettle();
 
       // Second slot: the main language is never offered (Q12 — only the
@@ -383,7 +386,7 @@ Future<TestApp> pumpApp(
 T readProvider<T>(WidgetTester tester) =>
     Provider.of<T>(tester.element(find.byType(HomePage)), listen: false);
 
-/// Opens the settings sheet via the gear icon and waits for the sheet
+/// Opens the settings dialog via the gear icon and waits for the open
 /// animation to finish.
 Future<void> openSettings(WidgetTester tester) async {
   await tester.tap(find.byIcon(Icons.settings_outlined));

@@ -409,7 +409,7 @@ Finder firstSymbolTile() => find
     .first;
 
 // ---------------------------------------------------------------------------
-// Settings-sheet helpers
+// Settings-dialog helpers
 // ---------------------------------------------------------------------------
 
 Future<void> openSettings(WidgetTester tester) async {

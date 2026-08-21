@@ -78,6 +78,21 @@ void runAddendum05Suite() {
       expect(railLabel('phrases', en.settingsPhrases), findsNothing);
     });
 
+    testWidgets('the rail shows all three category labels in Ukrainian',
+        (tester) async {
+      await pumpApp(tester, prefs: {'main_lang': 'uk'});
+      await openSettings(tester);
+
+      expect(railLabel('language', uk.settingsLanguage), findsOneWidget);
+      expect(railLabel('phrases', uk.settingsPhrases), findsOneWidget);
+      expect(railLabel('accessibility', uk.settingsAccessibility),
+          findsOneWidget);
+      // `settingsPhrases` renders with no "Parent" prefix here too — the
+      // string test below pins the ARB value, this pins what the rail
+      // actually paints (ADDENDUM-05 step 6).
+      expect(railLabel('phrases', en.settingsPhrases), findsNothing);
+    });
+
     testWidgets('tapping a rail entry swaps the pane and leaves the rail',
         (tester) async {
       await pumpApp(tester);

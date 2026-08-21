@@ -195,7 +195,7 @@ void runAddendum04Suite() {
       expect(lang.secondLang, AppLanguage.en);
       expect(lang.language, AppLanguage.en); // preserved by the swap
 
-      // The locale moved with main: sheet chrome is now Czech…
+      // The locale moved with main: dialog chrome is now Czech…
       expect(find.text(cs.settingsMainLangName), findsOneWidget);
       expect(find.text(en.settingsMainLangName), findsNothing);
 

@@ -34,7 +34,8 @@ void showSettingsDialog(BuildContext context) {
     // controllers this dialog reads are provided above the app's own
     // Navigator, so accepting the root-navigator default would build the
     // dialog outside their scope and every `context.watch` inside would
-    // throw. Mirror the sheet's navigator usage (ADDENDUM-05 Risks).
+    // throw. Keep the navigator the bottom sheet this replaced used
+    // (ADDENDUM-05 Risks).
     useRootNavigator: false,
     builder: (_) => const _SettingsDialog(),
   );
@@ -213,7 +214,9 @@ class _RailEntry extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         // Settings is parent-facing: standard Material targets apply and
-        // `ForgivingTap` is not required here (ADDENDUM-05 AAC checklist).
+        // `ForgivingTap` is not required here — a documented exception to the
+        // 72 pt child-facing `AppTokens.minTap`, registered in
+        // `docs/forgiving-taps.md` (ADDENDUM-05 AAC checklist).
         child: InkWell(
           key: ValueKey('settingsCategory_${category.name}'),
           onTap: onTap,
@@ -246,7 +249,8 @@ class _RailEntry extends StatelessWidget {
 }
 
 /// Category title, optional subtitle and the close X — present in every
-/// category, at the pane's trailing edge. Mirrors the old sheet header.
+/// category, at the pane's trailing edge. Mirrors the header of the bottom
+/// sheet this replaced.
 class _PaneHeader extends StatelessWidget {
   const _PaneHeader({required this.title, this.subtitle});
 
@@ -840,9 +844,10 @@ class _ToggleRow extends StatelessWidget {
 
 /// The Phrases category. One State owns both the scrolling list and the
 /// pinned add row, so the `TextEditingController` and `add()` behaviour are
-/// exactly what the sheet had. The add row sits **outside** the scroll view
-/// (ADDENDUM-05 step 3) because the phrase list is uncapped — pinned to the
-/// pane bottom it is always reachable without scrolling.
+/// exactly what the bottom sheet this replaced had. The add row sits
+/// **outside** the scroll view (ADDENDUM-05 step 3) because the phrase list is
+/// uncapped — pinned to the pane bottom it is always reachable without
+/// scrolling.
 class _PhrasesPane extends StatefulWidget {
   const _PhrasesPane();
 

@@ -73,6 +73,11 @@ Material(
 - Message-bar word tiles
 - The Speak button
 - Top-bar controls (language toggle, settings)
+- Settings category rail entries — `lib/widgets/settings_dialog.dart`
+  (`_RailEntry`, `minHeight: 52`). **Documented exception, not a migration
+  candidate:** Settings is parent-facing, not child-facing, so standard
+  Material target sizes are accepted here and the 72 pt child-facing
+  `AppTokens.minTap` does not apply (ADDENDUM-05 AAC checklist).
 
 Larger targets suffer less from slop cancels, so the keyboard was fixed
 first; migrate the rest if dropped taps are reported there.
