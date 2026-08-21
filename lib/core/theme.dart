@@ -210,6 +210,18 @@ class AppTokens {
 
   /// Minimum tap target (design spec asks 60, HandySpeak uses 72).
   static const double minTap = 72;
+
+  /// Settings dialog: fixed size, and the screen below which it presents
+  /// full-screen. The breakpoint is derived so the two cannot drift apart —
+  /// it is the dialog plus `s24` of margin on every side (ADR-0003).
+  static const double dialogW = 896;
+  static const double dialogH = 624;
+  static const double dialogMinScreenW = dialogW + s24 * 2; // 944
+  static const double dialogMinScreenH = dialogH + s24 * 2; // 672
+
+  /// Longest line of body text inside a settings pane. The fix for the
+  /// full-width text measure that motivated the redesign.
+  static const double measureMax = 640;
 }
 
 /// Convenience accessor: `context.colors`.
@@ -248,6 +260,17 @@ class AppTheme {
         border: inputBorder(c.divider),
         enabledBorder: inputBorder(c.divider),
         focusedBorder: inputBorder(c.primary),
+      ),
+      // Settings dialog chrome (ADDENDUM-05): card surface, card corners,
+      // clipped so panes can paint to the edge. Deliberately NO size here —
+      // the dialog's own layout owns `AppTokens.dialogW/dialogH` and the
+      // full-screen fallback below the breakpoint.
+      dialogTheme: DialogThemeData(
+        backgroundColor: c.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.rCard),
+        ),
+        clipBehavior: Clip.antiAlias,
       ),
       extensions: [c],
       textTheme: base.textTheme.apply(
