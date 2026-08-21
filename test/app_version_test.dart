@@ -18,7 +18,7 @@ void main() {
         RegExp(r'^version:\s*(\S+)\s*$', multiLine: true).firstMatch(pubspec);
     expect(match, isNotNull, reason: 'no `version:` field in pubspec.yaml');
 
-    // `0.5.0+1` → `0.5.0`: the marketing version is what the UI shows.
+    // `0.6.0+1` → `0.6.0`: the marketing version is what the UI shows.
     final pubspecVersion = match!.group(1)!.split('+').first;
     expect(kAppVersion, pubspecVersion);
   });

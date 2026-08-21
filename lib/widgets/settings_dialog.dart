@@ -213,7 +213,7 @@ class _CategoryRail extends StatelessWidget {
             // This reopens the "rail footer note" slot ADDENDUM-05 rejected
             // from the design — but for different content: a version string,
             // not the design's note. Deliberately quiet (ink3, 12 pt, no
-            // chrome) and unlocalized: `v0.5.0` reads the same in all three
+            // chrome) and unlocalized: the version reads the same in all three
             // locales, so it earns no ARB key.
             Padding(
               padding: const EdgeInsets.fromLTRB(
