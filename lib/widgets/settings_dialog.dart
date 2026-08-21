@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/app_language.dart';
+import '../core/app_version.dart';
 import '../core/theme.dart';
 import '../l10n/app_localizations.dart';
 import '../services/speech_service.dart';
@@ -148,7 +149,8 @@ class _SettingsDialogState extends State<_SettingsDialog> {
 /// (ADDENDUM-05 Risks): a fixed width truncates `Nastavení` / `Доступність`
 /// at text scale 1.3, which is the exact failure that disqualified top tabs.
 /// So: [IntrinsicWidth] around the column, labels that can never wrap, and no
-/// max-width clamp. Does not scroll — three entries plus a title always fit.
+/// max-width clamp. Does not scroll — a title, three entries and the version
+/// line at the foot always fit.
 class _CategoryRail extends StatelessWidget {
   const _CategoryRail({required this.selected, required this.onSelect});
 
@@ -202,6 +204,29 @@ class _CategoryRail extends StatelessWidget {
                 selected: c == selected,
                 onTap: () => onSelect(c),
               ),
+            // The rail's Column is bounded — the parent `Row` stretches it
+            // inside the dialog's fixed-height `SizedBox` — so `Spacer`
+            // pushes the version to the rail's foot rather than letting it
+            // sit under the last entry. `Spacer` has zero intrinsic width,
+            // so it does not disturb the surrounding `IntrinsicWidth`.
+            const Spacer(),
+            // This reopens the "rail footer note" slot ADDENDUM-05 rejected
+            // from the design — but for different content: a version string,
+            // not the design's note. Deliberately quiet (ink3, 12 pt, no
+            // chrome) and unlocalized: `v0.5.0` reads the same in all three
+            // locales, so it earns no ARB key.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppTokens.s24, AppTokens.s8, AppTokens.s24, AppTokens.s16),
+              child: Text(
+                'v$kAppVersion',
+                key: const ValueKey('settingsVersion'),
+                // Never wraps: the rail is `IntrinsicWidth` and unbounded.
+                maxLines: 1,
+                softWrap: false,
+                style: TextStyle(color: colors.ink3, fontSize: 12),
+              ),
+            ),
           ],
         ),
       ),

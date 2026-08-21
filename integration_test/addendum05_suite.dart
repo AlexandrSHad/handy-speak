@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:handy_speak/core/app_language.dart';
+import 'package:handy_speak/core/app_version.dart';
 import 'package:handy_speak/core/theme.dart';
 import 'package:handy_speak/l10n/app_localizations_cs.dart';
 import 'package:handy_speak/l10n/app_localizations_en.dart';
@@ -110,6 +111,17 @@ void runAddendum05Suite() {
       await openCategory(tester, 'language');
       expectLanguagePane(en);
       expectRailIntact(en);
+    });
+
+    testWidgets('the rail foot carries the app version', (tester) async {
+      await pumpApp(tester);
+      await openSettings(tester);
+
+      final label = tester.widget<Text>(find.byKey(railVersionKey));
+      // Built from `kAppVersion` (itself pinned to `pubspec.yaml` by
+      // `test/app_version_test.dart`), never a literal — so a version bump
+      // cannot leave this test asserting a stale string.
+      expect(label.data, 'v$kAppVersion');
     });
   });
 
@@ -556,6 +568,9 @@ Future<void> closeSettings(WidgetTester tester, String closeLabel) async {
 /// A rail entry, by test key — never by its localized label, which copy edits
 /// and locale flips would break.
 Finder railEntry(String name) => find.byKey(ValueKey('settingsCategory_$name'));
+
+/// The unlocalized version label at the rail's foot.
+const railVersionKey = ValueKey('settingsVersion');
 
 /// The [Text] inside a given rail entry — the one place a localized label is
 /// asserted, and only ever against a generated locale class.

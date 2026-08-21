@@ -37,7 +37,9 @@ user and are not recoverable from the artifact:
 - **Mood voices is untouched** — the disabled row exactly as it ships.
 - **Dropped from the design**: the per-language chip in Phrases, the empty
   phrase-list state, the rail footer note, and the uppercase section-header
-  styling (which is inherited prototype CSS, not a designed decision).
+  styling (which is inherited prototype CSS, not a designed decision). The
+  design's footer note stays rejected, but the rail foot later gained a quiet
+  `v<version>` label (added after this plan; see `_CategoryRail`).
 - **Kept from the design**: the add-row pinned to the pane bottom, and the
   two new category subtitles.
 - **`settingsPhrases` loses its "Parent · " prefix** — that prefix models a
@@ -338,7 +340,8 @@ Assertions:
 - Switch scanning and the four word-block gesture toggles the mockup shows —
   no counterpart in `lib/`.
 - The per-language chip, the empty phrase-list state, and the rail footer
-  note from the design.
+  note from the design — the note itself is still rejected; the rail foot now
+  carries an app-version label instead, added after this plan.
 - `docs/design/addendum-05/spec.md` — not written by the design session and
   deliberately not reconstructed; ADR-0003 and this plan carry the record.
 - Renaming suites off their ADDENDUM numbers — a standing wish, still not
