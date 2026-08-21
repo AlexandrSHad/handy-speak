@@ -46,7 +46,7 @@ aren't a fresh discovery later.
 ```
 lib/
   core/        theme, app_language, text_display
-  data/        static content: keyboard_layouts, categories, phrases_data, pictograms
+  data/        static content: keyboard_layouts, symbol_categories, phrases_data, pictograms
   services/    speech_service (TTS), storage_service (shared_preferences)
   state/       ChangeNotifier controllers: composer, language, phrases, settings
   widgets/     UI; home_page.dart is the root screen

@@ -17,7 +17,7 @@ class Pictogram {
       };
 }
 
-/// Pictograms grouped by category id. 8 categories × 10 symbols.
+/// Pictograms grouped by symbol category id. 8 categories × 10 symbols.
 const Map<String, List<Pictogram>> kPictograms = {
   'feelings': [
     Pictogram('😊', 'happy', 'šťastný', 'щасливий'),

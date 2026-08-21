@@ -20,7 +20,7 @@ class SymbolCategory {
       };
 }
 
-const List<SymbolCategory> kCategories = [
+const List<SymbolCategory> kSymbolCategories = [
   SymbolCategory('feelings', 'Feelings', 'Pocity', 'Почуття', '💛', Color(0xFFE8B53F)),
   SymbolCategory('food', 'Food', 'Jídlo', 'Їжа', '🍎', Color(0xFFE07A4E)),
   SymbolCategory('school', 'School', 'Škola', 'Школа', '✏️', Color(0xFF4F9BD1)),

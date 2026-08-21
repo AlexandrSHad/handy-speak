@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import '../core/app_language.dart';
 import '../core/text_display.dart';
 import '../core/theme.dart';
-import '../data/categories.dart';
+import '../data/symbol_categories.dart';
 import '../data/pictograms.dart';
 import '../state/composer_controller.dart';
 import '../state/language_controller.dart';
@@ -21,22 +21,22 @@ class SymbolBoard extends StatefulWidget {
 }
 
 class _SymbolBoardState extends State<SymbolBoard> {
-  String _categoryId = kCategories.first.id;
+  String _symbolCategoryId = kSymbolCategories.first.id;
 
   @override
   Widget build(BuildContext context) {
     final lang = context.watch<LanguageController>().language;
-    final pics = kPictograms[_categoryId] ?? const [];
+    final pics = kPictograms[_symbolCategoryId] ?? const [];
     final category =
-        kCategories.firstWhere((c) => c.id == _categoryId);
+        kSymbolCategories.firstWhere((c) => c.id == _symbolCategoryId);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(width: 168, child: _CategoryRail(
-          selectedId: _categoryId,
+        SizedBox(width: 168, child: _SymbolCategoryRail(
+          selectedId: _symbolCategoryId,
           lang: lang,
-          onSelect: (id) => setState(() => _categoryId = id),
+          onSelect: (id) => setState(() => _symbolCategoryId = id),
         )),
         const SizedBox(width: AppTokens.s12),
         Expanded(
@@ -84,8 +84,8 @@ class _SymbolBoardState extends State<SymbolBoard> {
   }
 }
 
-class _CategoryRail extends StatelessWidget {
-  const _CategoryRail({
+class _SymbolCategoryRail extends StatelessWidget {
+  const _SymbolCategoryRail({
     required this.selectedId,
     required this.lang,
     required this.onSelect,
@@ -100,10 +100,10 @@ class _CategoryRail extends StatelessWidget {
     final colors = context.colors;
     final big = context.select<SettingsController, bool>((s) => s.bigLetters);
     return ListView.separated(
-      itemCount: kCategories.length,
+      itemCount: kSymbolCategories.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppTokens.s8),
       itemBuilder: (context, i) {
-        final c = kCategories[i];
+        final c = kSymbolCategories[i];
         final active = c.id == selectedId;
         return Material(
           color: active ? c.color.withValues(alpha: 0.16) : colors.surface2,
