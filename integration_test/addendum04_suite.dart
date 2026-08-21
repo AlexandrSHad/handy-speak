@@ -208,10 +208,11 @@ void runAddendum04Suite() {
   });
 
   group('ADDENDUM-04 · dropdown field', () {
-    // The phrase input is the sheet's other input — the dropdown must
+    // The phrase input is the dialog's other input — the dropdown must
     // match its height at every text scale (kids' tablets commonly run
     // accessibility font scaling; a fixed-height dropdown shrinks relative
-    // to inputs that scale).
+    // to inputs that scale). The two inputs live in different categories
+    // now (ADDENDUM-05), so the measurement spans two rail visits.
     Future<void> expectDropdownMatchesInput(WidgetTester tester) async {
       await pumpApp(tester, prefs: {
         'main_lang': 'en',
@@ -219,24 +220,16 @@ void runAddendum04Suite() {
       });
       await openSettings(tester);
 
+      // Language category — the dialog always opens here.
       final dropdownH = tester
           .getSize(find.byKey(const ValueKey('settingsLangDropdown_main')))
           .height;
 
-      // The phrase section may not be built yet (lazy ListView below the
-      // fold at larger text scales) — scroll until it exists, then pin it.
-      var attempts = 0;
-      while (find.byType(TextField).evaluate().isEmpty && attempts++ < 10) {
-        await tester.drag(
-            find.descendant(
-                of: find.byType(BottomSheet),
-                matching: find.byType(ListView)),
-            const Offset(0, -500));
-        await tester.pumpAndSettle();
-      }
+      // Phrases category: the add row is pinned to the pane bottom, outside
+      // the scroll view, so the field is on screen at every text scale — no
+      // scrolling to reach it.
+      await openCategory(tester, 'phrases');
       final input = find.byType(TextField);
-      await tester.ensureVisible(input);
-      await tester.pumpAndSettle();
       final inputH = tester.getSize(input).height;
 
       expect(dropdownH, closeTo(inputH, 1.0),
@@ -371,16 +364,24 @@ Future<TestApp> pumpApp(
 T readProvider<T>(WidgetTester tester) =>
     Provider.of<T>(tester.element(find.byType(HomePage)), listen: false);
 
-/// Opens the settings sheet via the gear icon and waits for the sheet
+/// Opens the settings dialog via the gear icon and waits for the open
 /// animation to finish.
 Future<void> openSettings(WidgetTester tester) async {
   await tester.tap(find.byIcon(Icons.settings_outlined));
   await tester.pumpAndSettle();
 }
 
-/// Closes the settings sheet via the header's close button by its tooltip
-/// label (the phrase rows reuse `Icons.close`; the label follows the main
-/// language per ADR-0002, so pass the localized [closeLabel]).
+/// Opens a Settings category from the rail (`language`, `phrases`,
+/// `accessibility`). The dialog always opens on Language, so anything in
+/// another category needs this first.
+Future<void> openCategory(WidgetTester tester, String name) async {
+  await tester.tap(find.byKey(ValueKey('settingsCategory_$name')));
+  await tester.pumpAndSettle();
+}
+
+/// Closes the settings dialog via the pane header's close button by its
+/// tooltip label (the phrase rows reuse `Icons.close`; the label follows the
+/// main language per ADR-0002, so pass the localized [closeLabel]).
 Future<void> closeSettings(WidgetTester tester, String closeLabel) async {
   await tester.tap(find.byTooltip(closeLabel));
   await tester.pumpAndSettle();

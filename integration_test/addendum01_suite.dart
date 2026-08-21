@@ -43,20 +43,25 @@ void runAddendum01Suite() {
       await openSettings(tester);
 
       // The Big letters row must be the FIRST toggle in the Accessibility
-      // section: title above it, the haptics row below it.
+      // category: the pane title above it, the haptics row below it.
+      await openCategory(tester, 'accessibility');
       await tester.scrollUntilVisible(
         find.text(en.settingsHapticName),
         100,
         scrollable: settingsScrollable(),
       );
       await tester.pumpAndSettle();
-      final titleDy = tester.getTopLeft(find.text(en.settingsAccessibility)).dy;
+      // The category name renders twice — once in the rail, once as the pane
+      // header title. The rail comes first in the Row, so `.last` is the
+      // header, which is the one this ordering is about.
+      final titleDy =
+          tester.getTopLeft(find.text(en.settingsAccessibility).last).dy;
       final bigDy = tester.getTopLeft(find.text(en.settingsBigLettersName)).dy;
       final hapticDy = tester.getTopLeft(find.text(en.settingsHapticName)).dy;
       expect(titleDy, lessThan(bigDy));
       expect(bigDy, lessThan(hapticDy));
 
-      await tapToggle(tester, en.settingsBigLettersName);
+      await tapToggle(tester, 'accessibility', en.settingsBigLettersName);
       await closeSettings(tester);
 
       // Content surfaces uppercase…
@@ -140,7 +145,7 @@ void runAddendum01Suite() {
       expect(find.text('WANT'), findsOneWidget);
 
       await openSettings(tester);
-      await tapToggle(tester, en.settingsBigLettersName);
+      await tapToggle(tester, 'accessibility', en.settingsBigLettersName);
       await closeSettings(tester);
 
       expect(find.text('want'), findsOneWidget); // tile reverts instantly
@@ -185,7 +190,7 @@ void runAddendum01Suite() {
       final tileBefore = tester.getSize(firstSymbolTile()).height;
 
       await openSettings(tester);
-      await tapToggle(tester, en.settingsShowPhrasesName);
+      await tapToggle(tester, 'phrases', en.settingsShowPhrasesName);
       // The "hidden" note shows under the toggle while OFF.
       expect(find.text(en.settingsPhrasesHiddenNote), findsOneWidget);
       await closeSettings(tester);
@@ -206,18 +211,14 @@ void runAddendum01Suite() {
       expect(find.byType(PhraseStrip), findsNothing);
 
       await openSettings(tester);
-      await tester.scrollUntilVisible(
-        find.byType(TextField),
-        100,
-        scrollable: settingsScrollable(),
-      );
-      await tester.pumpAndSettle();
-
+      await openCategory(tester, 'phrases');
+      // The add row is pinned to the pane bottom, outside the scroll view —
+      // always on screen, whatever the phrase list does (ADDENDUM-05).
       await tester.enterText(find.byType(TextField), 'Good morning');
       await tester.tap(find.text(en.settingsAdd));
       await tester.pumpAndSettle();
 
-      expect(find.text('Good morning'), findsOneWidget); // listed in sheet
+      expect(find.text('Good morning'), findsOneWidget); // listed in the pane
       final phrases =
           readProvider<PhrasesController>(tester).phrasesFor(AppLanguage.en);
       expect(phrases.map((p) => p.text), contains('Good morning'));
@@ -229,7 +230,7 @@ void runAddendum01Suite() {
       expect(find.byType(PhraseStrip), findsNothing);
 
       await openSettings(tester);
-      await tapToggle(tester, en.settingsShowPhrasesName);
+      await tapToggle(tester, 'phrases', en.settingsShowPhrasesName);
       await closeSettings(tester);
 
       expect(find.byType(PhraseStrip), findsOneWidget);
@@ -274,10 +275,10 @@ void runAddendum01Suite() {
     testWidgets('both settings persist across an app restart', (tester) async {
       await pumpApp(tester);
       await openSettings(tester);
-      // Phrases section sits above Accessibility — toggle it first so the
-      // sheet only ever needs to scroll downward.
-      await tapToggle(tester, en.settingsShowPhrasesName);
-      await tapToggle(tester, en.settingsBigLettersName);
+      // Two categories, one dialog session: each toggle opens its own rail
+      // entry, so the order here is arbitrary.
+      await tapToggle(tester, 'phrases', en.settingsShowPhrasesName);
+      await tapToggle(tester, 'accessibility', en.settingsBigLettersName);
       await closeSettings(tester);
 
       // Simulate a restart: a fresh storage + controller over the same
@@ -417,16 +418,29 @@ Future<void> openSettings(WidgetTester tester) async {
 }
 
 Future<void> closeSettings(WidgetTester tester) async {
-  // The header close button is the first close icon in tree order (phrase
-  // rows further down also use Icons.close for "remove").
+  // The pane header's X is still the first close icon in tree order: the
+  // dialog is a Row of [rail, divider, pane], the rail carries no close
+  // icon, and inside the pane the header sits above the scroll body whose
+  // phrase rows also use Icons.close for "remove" (ADDENDUM-05).
   await tester.tap(find.byIcon(Icons.close).first);
   await tester.pumpAndSettle();
 }
 
-/// The settings sheet's ListView (first scrollable inside the bottom sheet).
-Finder settingsScrollable() => find
-    .descendant(of: find.byType(BottomSheet), matching: find.byType(Scrollable))
-    .first;
+/// Opens a Settings category from the rail (`language`, `phrases`,
+/// `accessibility`). The dialog always opens on Language and never remembers
+/// the last category, so every test that touches another category has to
+/// navigate there first.
+Future<void> openCategory(WidgetTester tester, String name) async {
+  await tester.tap(find.byKey(ValueKey('settingsCategory_$name')));
+  await tester.pumpAndSettle();
+}
+
+/// The [Scrollable] inside the open category's pane — the scroll view is
+/// keyed, the Scrollable it builds is the descendant the drag helpers need.
+Finder settingsScrollable() => find.descendant(
+      of: find.byKey(const ValueKey('settingsPaneScrollable')),
+      matching: find.byType(Scrollable),
+    );
 
 /// The [Switch] sitting in the same toggle row as the [name] label.
 Finder toggleSwitch(String name) => find.descendant(
@@ -434,9 +448,14 @@ Finder toggleSwitch(String name) => find.descendant(
       matching: find.byType(Switch),
     );
 
-/// Scrolls the open settings sheet until the [name] toggle row is visible
-/// and flips its switch.
-Future<void> tapToggle(WidgetTester tester, String name) async {
+/// Opens the [category] that owns the [name] toggle, scrolls its pane until
+/// the row is visible, and flips its switch.
+Future<void> tapToggle(
+  WidgetTester tester,
+  String category,
+  String name,
+) async {
+  await openCategory(tester, category);
   await tester.scrollUntilVisible(
     find.text(name),
     100,

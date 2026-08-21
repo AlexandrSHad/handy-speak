@@ -167,6 +167,10 @@ void runAddendum03Suite() {
             findsWidgets);
       }
       // Tap outside the menu to close it without changing anything.
+      // (640, 30) is above the Settings dialog's own frame — but it is the
+      // OPEN MENU that gets dismissed, not the dialog: the dropdown menu is
+      // its own route whose full-screen barrier sits above the dialog and
+      // swallows this tap. Safe as-is; do not "fix" it into a scrim tap.
       await tester.tapAt(const Offset(640, 30));
       await tester.pumpAndSettle();
 
