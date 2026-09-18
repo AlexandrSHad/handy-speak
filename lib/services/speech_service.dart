@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 
 import '../core/app_language.dart';
+import 'tts_engine.dart';
 
 /// Readiness of the text-to-speech engine. The UI gates the Speak button on
 /// this: [initializing] shows a spinner, [unavailable] shows an error.
@@ -20,11 +20,15 @@ enum SpeechStatus { initializing, ready, unavailable }
 /// a wiring change, not a refactor (§2). The POC always passes the engine
 /// defaults (null → leave the engine's current rate/pitch untouched).
 class SpeechService extends ChangeNotifier {
-  SpeechService() {
+  /// [engine] is the seam over `flutter_tts` (testing-prep stage). Production
+  /// wiring passes a real [FlutterTtsEngine] (see `main.dart`); unit tests inject
+  /// a fake. Defaulted so existing call sites keep working — the default lives in
+  /// `tts_engine.dart`, so this class never imports `flutter_tts` itself.
+  SpeechService({TtsEngine? engine}) : _engine = engine ?? FlutterTtsEngine() {
     _ready = _init();
   }
 
-  final FlutterTts _tts = FlutterTts();
+  final TtsEngine _engine;
 
   /// Hard ceiling on the service bind. A hung engine must still resolve to
   /// [SpeechStatus.unavailable] so the "Preparing…" spinner can't spin forever.
@@ -63,24 +67,22 @@ class SpeechService extends ChangeNotifier {
   /// The actual (slow) engine setup, bounded by [_initTimeout] in [_init].
   Future<void> _bind() async {
     // Make speak() future resolve on completion so isSpeaking is reliable.
-    await _tts.awaitSpeakCompletion(true);
+    await _engine.awaitSpeakCompletion(true);
 
-    _tts.setStartHandler(() => _setSpeaking(true));
-    _tts.setCompletionHandler(() => _setSpeaking(false));
-    _tts.setCancelHandler(() => _setSpeaking(false));
-    _tts.setPauseHandler(() => _setSpeaking(false));
-    _tts.setErrorHandler((_) => _setSpeaking(false));
+    // One signal collapses the plugin's five speaking-state handlers; the
+    // adapter fans it back out to start/completion/cancel/pause/error.
+    _engine.onSpeakingStateChanged = _setSpeaking;
 
     // Call the engine directly, NOT the public setLanguage(): that one is gated
     // on [isReady], which is still false here, so it would no-op.
-    await _tts.setLanguage(_locale);
+    await _engine.setLanguage(_locale);
   }
 
   Future<void> setLanguage(String locale) async {
     _locale = locale; // record intent; _bind() applies it if we're not ready yet
     if (!isReady) return;
     try {
-      await _tts.setLanguage(locale);
+      await _engine.setLanguage(locale);
     } catch (_) {
       // Non-fatal: an unsupported locale must not crash composition.
     }
@@ -94,7 +96,7 @@ class SpeechService extends ChangeNotifier {
   Future<bool> hasVoiceFor(AppLanguage lang) async {
     if (!isReady) return true;
     try {
-      final voices = await _tts.getVoices;
+      final voices = await _engine.getVoices();
       if (voices is! List) return true;
       // A per-entry `is Map` guard (rather than an unchecked cast inside the
       // outer try/catch) means one malformed voice entry is skipped, not
@@ -111,11 +113,11 @@ class SpeechService extends ChangeNotifier {
   Future<void> speak(String text, {double? rate, double? pitch}) async {
     if (!isReady || text.trim().isEmpty) return;
     try {
-      await _tts.stop();
-      if (rate != null) await _tts.setSpeechRate(rate);
-      if (pitch != null) await _tts.setPitch(pitch);
+      await _engine.stop();
+      if (rate != null) await _engine.setSpeechRate(rate);
+      if (pitch != null) await _engine.setPitch(pitch);
       _setSpeaking(true);
-      await _tts.speak(text);
+      await _engine.speak(text);
       // With awaitSpeakCompletion(true) this resolves when playback ends.
       _setSpeaking(false);
     } catch (_) {
@@ -126,7 +128,7 @@ class SpeechService extends ChangeNotifier {
   Future<void> stop() async {
     if (!isReady) return;
     try {
-      await _tts.stop();
+      await _engine.stop();
     } catch (_) {
       // ignore
     }

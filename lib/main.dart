@@ -7,6 +7,7 @@ import 'core/theme.dart';
 import 'l10n/app_localizations.dart';
 import 'services/speech_service.dart';
 import 'services/storage_service.dart';
+import 'services/tts_engine.dart';
 import 'state/composer_controller.dart';
 import 'state/language_controller.dart';
 import 'state/phrases_controller.dart';
@@ -29,7 +30,7 @@ Future<void> main() async {
   // so the first frame paints immediately instead of sitting on a white screen
   // while the Android TTS service binds. The Speak button shows a spinner until
   // SpeechService.status flips to ready (or an error if it never binds).
-  final speech = SpeechService();
+  final speech = SpeechService(engine: FlutterTtsEngine());
 
   final settings = SettingsController(storage)..load();
   final phrases = PhrasesController(storage)..load();

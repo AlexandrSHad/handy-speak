@@ -1,78 +1,120 @@
 ---
 name: handyspeak-suites
-description: Create or update HandySpeak's paired test suites — one shared run<Suite>() body consumed by both a headless test/ entry and an on-device integration_test/ entry. Use when adding tests for a feature (addendum or standalone), creating or extending a suite pair, or when a storage-key rename or test-key change must ripple through existing suites.
+description: Physically write a HandySpeak test suite — a plain headless test/<feature>_test.dart on the shared test/support/app_harness.dart, plus the one device_smoke pair under integration_test/. Use when adding or extending a feature's tests, or when a storage-key rename or test-key change must ripple through existing suites.
 ---
 
 # HandySpeak test suites
 
-Canonical example to copy from: `integration_test/addendum03_suite.dart`
-(newest, richest harness). Older pairs: `addendum01`, `addendum02`, `keytap`.
+`docs/testing-strategy.md` is the source of truth for **what** we test, **where**,
+and the tier vocabulary — **Unit**, **Behavior**, **Device smoke**. Read it first
+if you are deciding coverage. This skill governs the other half: **how to
+physically write a suite** once you know what it must cover.
 
-## The pairing rule
+Canonical harness to import and copy shapes from: `test/support/app_harness.dart`
+(`pumpApp`, `FakeTts`, `readProvider<T>`).
 
-Every feature's tests land as a **suite trio** sharing one body:
+## Where a feature's tests live
+
+A feature's Unit + Behavior tests are a **plain headless file**
+`test/<feature>_test.dart` — a normal `void main()` with `test` / `testWidgets`
+that imports the shared harness:
+
+```dart
+import 'support/app_harness.dart';
+```
+
+No suite body, no binding init, no `integration_test/` twin. It runs on the Dart
+VM in seconds via `puro flutter test test/<feature>_test.dart`.
+
+**Name by feature, never by addendum number.** ADDENDUM numbers are planning
+artifacts, not units of behaviour; a suite named after one accretes unrelated
+assertions and no one can find a feature's tests. The nine canonical feature
+slugs are the complete set:
+
+`message_composition` · `keyboard_input` · `symbols_pictograms` · `math_board` ·
+`saved_phrases` · `language_set` · `speech_tts` · `settings` · `forgiving_tap`
+
+New tests slot into the existing feature file; a genuinely new feature gets a new
+slug in the same shape.
+
+## The device smoke — the ONE surviving `integration_test/` consumer
+
+The device smoke is the only thing left under `integration_test/`, and it is a
+**pair, not a trio**:
 
 | File | Role |
 |---|---|
-| `integration_test/<name>_suite.dart` | `run<Name>Suite()` — all groups, tests, and the shared harness. Contains **no binding init**; each entry point does its own. |
-| `integration_test/<name>_test.dart` | On-device entry: `IntegrationTestWidgetsFlutterBinding.ensureInitialized(); run<Name>Suite();` |
-| `test/<name>_test.dart` | Headless entry: `import '../integration_test/<name>_suite.dart';` then `run<Name>Suite();` |
+| `integration_test/device_smoke_suite.dart` | `runDeviceSmokeSuite()` — the body; walks one end-to-end path. **No binding init.** |
+| `integration_test/device_smoke_test.dart` | On-device entry: `IntegrationTestWidgetsFlutterBinding.ensureInitialized(); runDeviceSmokeSuite();` |
 
-The headless entry is the agent's fast loop (`puro flutter test test/<name>_test.dart`,
-seconds, Dart VM); the on-device entry runs the identical body against a real
-Android device (`puro flutter test integration_test/<name>_test.dart -d <device>`,
-manual — web and desktop are unsupported here). One body, two worlds: never
-fork logic between them.
+**There is no headless `test/` entry for it — deliberately.** The smoke's whole
+reason to exist is the on-device path (a genuine TTS-adjacent call) that the
+headless tiers structurally cannot prove. A headless twin would either duplicate
+feature coverage the Behavior tier already owns, or — if it exercised the real
+device call — it can't run green off-device and would break the green gate. So
+the smoke stays device-only.
 
-## Harness checklist
+It is a per-release sanity check, not per-feature coverage. Runs manually,
+Android-only today:
+`puro flutter test integration_test/device_smoke_test.dart -d <device>`.
 
-Build the suite around these pieces (copy shapes from `addendum03_suite.dart`):
+## Harness mechanics
+
+Import these from `test/support/app_harness.dart`; do not re-implement them per
+file.
 
 - **`pumpApp(tester, prefs: {...})`** — 1280×800 landscape viewport, DPR 1.0,
-  reset via `addTearDown(tester.view.reset)`; `SharedPreferences.setMockInitialValues(prefs)`
-  before `StorageService().init()`; a `FakeTts` installed **before**
-  `SpeechService().init()`; the real controllers (`SettingsController`,
-  `PhrasesController`, `ComposerController`, `LanguageController`) constructed
-  and `load()`ed exactly like `lib/main.dart` does; `pumpWidget(HandySpeakApp(...))`
-  then `pumpAndSettle()`. Returns a handle (`TestApp`) exposing storage + tts
-  for assertions.
-- **`FakeTts`** — mocks the `flutter_tts` `MethodChannel`; records every call;
-  `isLanguageAvailable` → true, `getVoices` → a **mutable** voices list
-  (defaults to en-US + cs-CZ only, so "missing uk voice" scenarios are the
-  natural start), everything else → 1. Add a `spokenTexts` getter when tests
-  assert what was spoken.
-- **`readProvider<T>(tester)`** — `Provider.of<T>(tester.element(find.byType(HomePage)), listen: false)`.
+  reset via `addTearDown(tester.view.reset)`;
+  `SharedPreferences.setMockInitialValues(prefs)` before `StorageService().init()`;
+  a `FakeTts` installed **before** `SpeechService().init()`; the real controllers
+  (`SettingsController`, `PhrasesController`, `ComposerController`,
+  `LanguageController`) constructed and `load()`ed exactly like `lib/main.dart`
+  does; `pumpWidget(HandySpeakApp(...))` then `pumpAndSettle()`. Returns a handle
+  exposing storage + tts for assertions.
+- **`FakeTts`** — mocks the `flutter_tts` `MethodChannel` at the platform-channel
+  level; records every call; `isLanguageAvailable` → true, `getVoices` → a
+  **mutable** voices list (defaults to en-US + cs-CZ only, so "missing uk voice"
+  scenarios are the natural start), everything else → 1. Add a `spokenTexts`
+  getter when tests assert what was spoken.
+- **`readProvider<T>(tester)`** —
+  `Provider.of<T>(tester.element(find.byType(HomePage)), listen: false)`.
 - Small act helpers (e.g. `openSettings(tester)` taps the gear icon and settles).
 
 ## Seeding rules
 
-- **Seed real storage keys.** Controllers restore from `shared_preferences`
-  and decide fresh-install vs. restore by key *presence*. A seed that omits a
-  key can silently take the fresh-install path and erase sibling keys
-  (e.g. seeding `second_lang` without `main_lang` post-ADDENDUM-04). Mirror
-  the exact keys the controllers write — check the `_k*` constants in
-  `lib/state/` — never hand-roll controller state.
-- **After any storage-key rename, grep both dirs for the old key.** Stale
-  seeds fail as confusing defaults, not errors — a green-looking rerun can be
-  testing the fresh-install path instead of the case you meant.
+- **Seed real storage keys.** Controllers restore from `shared_preferences` and
+  decide fresh-install vs. restore by key *presence*. A seed that omits a key can
+  silently take the fresh-install path and erase sibling keys (e.g. seeding
+  `second_lang` without `main_lang` post-ADDENDUM-04). Mirror the exact keys the
+  controllers write — check the `_k*` constants in `lib/state/` — never hand-roll
+  controller state.
+- **After any storage-key rename, grep both `test/` and `integration_test/` for
+  the old key.** Stale seeds fail as confusing defaults, not errors — a
+  green-looking rerun can be testing the fresh-install path instead of the case
+  you meant.
 
 ## Finders and locale rules
 
-- Tap by `ValueKey` test keys (the `settingsLangPicker_*` convention), never
-  by localized text — copy edits and locale flips break text finders.
-- Chrome (Settings labels, buttons, hints) follows the **main** language;
-  board surfaces (keyboard layout, pictograms, phrases) follow the **active**
-  language (ADR-0002). Assert against the right one, and construct the
-  expected strings from the generated locale classes
-  (`AppLocalizationsEn()`, `AppLocalizationsUk()`, …) rather than literals.
+- Tap by `ValueKey` test keys (the `settingsLangPicker_*` convention), never by
+  localized text — copy edits and locale flips break text finders.
+- Chrome (Settings labels, buttons, hints) follows the **main** language; board
+  surfaces (keyboard layout, pictograms, phrases) follow the **active** language
+  (ADR-0002). Assert against the right one, and construct expected strings from
+  the generated locale classes (`AppLocalizationsEn()`, `AppLocalizationsUk()`, …)
+  rather than literals.
 
 ## Done when
 
-- [ ] All three files exist (or the touched pair is updated); entries contain
-      only binding init + the `run<Name>Suite()` call.
+- [ ] The feature's tests live in `test/<feature>_test.dart` (feature slug, not an
+      addendum number), importing `support/app_harness.dart`; no
+      `integration_test/` twin for it.
+- [ ] If the device smoke was touched, its **pair** is intact —
+      `integration_test/device_smoke_suite.dart` (body, no binding init) +
+      `integration_test/device_smoke_test.dart` (binding init +
+      `runDeviceSmokeSuite()`); still no headless `test/` entry.
 - [ ] `puro flutter analyze` is clean.
-- [ ] `puro flutter test test/<name>_test.dart` is green (fast loop).
-- [ ] Full `puro flutter test` is green — including the *other* suites, since
-      storage-key and test-key changes ripple into them.
-- [ ] The on-device run is offered to the user (agent can't verify it):
-      `puro flutter test integration_test/<name>_test.dart -d <device>`.
+- [ ] `puro flutter test test/<feature>_test.dart` is green (fast loop).
+- [ ] Full `puro flutter test` is green — including the *other* feature files,
+      since storage-key and test-key changes ripple into them.
+- [ ] The on-device smoke run is offered to the user (agent can't verify it):
+      `puro flutter test integration_test/device_smoke_test.dart -d <device>`.
