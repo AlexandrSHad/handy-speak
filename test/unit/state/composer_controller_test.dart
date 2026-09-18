@@ -1,16 +1,10 @@
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:handy_speak/core/app_language.dart';
-import 'package:handy_speak/services/speech_service.dart';
-import 'package:handy_speak/services/storage_service.dart';
 import 'package:handy_speak/state/composer_controller.dart';
-import 'package:handy_speak/state/language_controller.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-// ADDENDUM-02 controller tests. The ComposerController groups are pure
-// (no binding, no services). The LanguageController group initializes the
-// binding once to fake `flutter_tts` at the platform-channel level — the
-// same pattern as the ADDENDUM-01 widget suite, but without pumping widgets.
+// ComposerController unit tests — pure controller logic (no binding, no
+// services, no widget tree): dual sentence/math buffers, activeIndex/caret
+// branching, and the math mutators. The cross-controller "setLanguage clears
+// the sentence" behaviour lives in language_controller_test.dart.
 
 void main() {
   group('ComposerController · dual buffers', () {
@@ -168,71 +162,4 @@ void main() {
       expect(notifications, 0);
     });
   });
-
-  group('LanguageController · setLanguage clears only the sentence', () {
-    setUpAll(() {
-      TestWidgetsFlutterBinding.ensureInitialized();
-      SharedPreferences.setMockInitialValues({});
-    });
-
-    test('an EN⇄CS switch wipes the sentence but preserves the math problem',
-        () async {
-      final tts = _FakeTts()..install();
-      addTearDown(tts.uninstall);
-
-      final storage = StorageService();
-      await storage.init();
-      final speech = SpeechService();
-      await speech.init();
-      final composer = ComposerController();
-      final lang = LanguageController(storage, speech, composer)..load();
-
-      // Seed both workspaces.
-      composer.setMode(InputMode.math);
-      composer.appendMathDigit('3');
-      composer.appendMathOp('+');
-      composer.appendMathDigit('4');
-      composer.setMode(InputMode.keyboard);
-      composer.addChar('h');
-      composer.addChar('i');
-
-      lang.setLanguage(AppLanguage.cs);
-
-      // Active (keyboard) buffer is the sentence — cleared.
-      expect(composer.text, '');
-      // Math survived.
-      composer.setMode(InputMode.math);
-      expect(composer.text.trim(), '3 + 4');
-
-      // And switching back still has it.
-      lang.setLanguage(AppLanguage.en);
-      composer.setMode(InputMode.math);
-      expect(composer.text.trim(), '3 + 4');
-    });
-  });
-}
-
-/// Minimal `flutter_tts` platform-channel fake: records calls and answers
-/// every method as success (1) so SpeechService binds to `ready`.
-class _FakeTts {
-  final List<MethodCall> calls = [];
-  static const _channel = MethodChannel('flutter_tts');
-
-  void install() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(_channel, (call) async {
-      calls.add(call);
-      switch (call.method) {
-        case 'isLanguageAvailable':
-          return true;
-        default:
-          return 1;
-      }
-    });
-  }
-
-  void uninstall() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(_channel, null);
-  }
 }

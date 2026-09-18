@@ -1,40 +1,169 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:handy_speak/core/app_language.dart';
 import 'package:handy_speak/l10n/app_localizations_cs.dart';
 import 'package:handy_speak/l10n/app_localizations_en.dart';
-import 'package:handy_speak/main.dart';
+import 'package:handy_speak/l10n/app_localizations_uk.dart';
 import 'package:handy_speak/services/speech_service.dart';
 import 'package:handy_speak/services/storage_service.dart';
 import 'package:handy_speak/state/composer_controller.dart';
 import 'package:handy_speak/state/language_controller.dart';
-import 'package:handy_speak/state/phrases_controller.dart';
-import 'package:handy_speak/state/settings_controller.dart';
-import 'package:handy_speak/widgets/home_page.dart';
 import 'package:handy_speak/widgets/keyboard_view.dart';
 import 'package:handy_speak/widgets/top_bar.dart';
-import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-/// Verifies the ADDENDUM-04 features (language set: main + optional second,
-/// device-language seeding, the unsupported-device banner, the second-
-/// language Switch, and the ADR-0002 UI-locale pin) end to end against the
-/// real widget tree, with `flutter_tts` and `shared_preferences` faked at
-/// the platform-channel level.
-///
-/// Swap-via-main-dropdown and per-slot voice warnings are regression-covered
-/// by the (migrated) ADDENDUM-03 suite; not duplicated here.
-///
-/// Shared between `test/addendum04_test.dart` (headless `flutter test`) and
-/// `integration_test/addendum04_test.dart` (on-device). Mirrors the
-/// ADDENDUM-03 suite shape. Deliberately does NOT initialise any binding —
-/// each entry point does its own.
-void runAddendum04Suite() {
+import '../support/app_harness.dart';
+
+/// Language set & localization behaviour: the Ukrainian UI chrome, the
+/// main/second language pair in the top bar, the Settings language pickers,
+/// first-run device-language seeding, the second-language Switch, the ADR-0002
+/// UI-locale pin, the dropdown field, and persistence. Migrated from the
+/// ADDENDUM-03 (Ukrainian chrome / language pair / pickers) and ADDENDUM-04
+/// (all groups) suites.
+void main() {
   final en = AppLocalizationsEn();
   final cs = AppLocalizationsCs();
+  final uk = AppLocalizationsUk();
 
-  group('ADDENDUM-04 · first run / device-language seeding', () {
+  group('Ukrainian UI chrome', () {
+    testWidgets(
+        'with uk main, ARB-driven UI strings render Ukrainian, not English',
+        (tester) async {
+      // ADR-0002: chrome follows the MAIN language, so uk must be seeded as
+      // main (a uk *active* language no longer moves chrome). `uk` must be
+      // registered in MaterialApp.supportedLocales, or Flutter's locale
+      // resolution silently falls back to the first supported locale (en) for
+      // every AppLocalizations string.
+      await pumpApp(tester, prefs: {'main_lang': 'uk'});
+
+      expect(find.text(uk.settings), findsNothing); // gear icon, not open yet
+      expect(find.text(uk.modeMath), findsOneWidget);
+      expect(find.text(en.modeMath), findsNothing);
+
+      await openSettings(tester);
+      expect(find.text(uk.settings), findsOneWidget);
+      expect(find.text(en.settings), findsNothing);
+    });
+  });
+
+  group('Language pair (top bar)', () {
+    testWidgets('a two-language set shows exactly its two pills, never a third',
+        (tester) async {
+      await pumpApp(tester, prefs: {
+        'main_lang': 'en',
+        'second_lang': 'cs',
+      });
+
+      expect(topBarPillText('EN'), findsOneWidget);
+      expect(topBarPillText('CZ'), findsOneWidget);
+      expect(topBarPillText('UK'), findsNothing);
+    });
+
+    testWidgets('a set including uk shows exactly those two pills',
+        (tester) async {
+      await pumpApp(tester, prefs: {
+        'main_lang': 'en',
+        'second_lang': 'uk',
+      });
+
+      expect(topBarPillText('EN'), findsOneWidget);
+      expect(topBarPillText('UK'), findsOneWidget);
+      expect(topBarPillText('CZ'), findsNothing);
+    });
+  });
+
+  group('Settings language pickers', () {
+    testWidgets('main dropdown offers all 3 languages; second excludes main',
+        (tester) async {
+      await pumpApp(tester, prefs: {
+        'main_lang': 'en',
+        'second_lang': 'cs',
+      });
+      await openSettings(tester);
+
+      expect(find.text(en.settingsMainLangName), findsOneWidget);
+      expect(find.text(en.settingsSecondLangName), findsOneWidget);
+
+      // Main slot: every supported language is offered. (The currently
+      // selected item renders twice — closed field + open menu — so
+      // presence, not count.)
+      await tester
+          .tap(find.byKey(const ValueKey('settingsLangDropdown_main')));
+      await tester.pumpAndSettle();
+      for (final l in AppLanguage.values) {
+        expect(find.byKey(ValueKey('settingsLangItem_main_${l.name}')),
+            findsWidgets);
+      }
+      // Tap outside the menu to close it without changing anything. Only the
+      // MENU closes: its full-screen barrier sits above the dialog. The point
+      // is kept INSIDE the dialog frame on pane-header whitespace.
+      await tester.tapAt(const Offset(900, 120));
+      await tester.pumpAndSettle();
+
+      // Second slot: the main language is never offered (Q12).
+      await tester
+          .tap(find.byKey(const ValueKey('settingsLangDropdown_second')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('settingsLangItem_second_cs')),
+          findsWidgets);
+      expect(find.byKey(const ValueKey('settingsLangItem_second_uk')),
+          findsWidgets);
+      expect(find.byKey(const ValueKey('settingsLangItem_second_en')),
+          findsNothing);
+    });
+
+    testWidgets(
+        'picking the current second language as main swaps the set (Q12)',
+        (tester) async {
+      await pumpApp(tester, prefs: {
+        'main_lang': 'en',
+        'second_lang': 'cs',
+      }); // main=en, second=cs
+      await openSettings(tester);
+
+      // Main dropdown's "Čeština" row (the second slot's language) — swaps.
+      await tester
+          .tap(find.byKey(const ValueKey('settingsLangDropdown_main')));
+      await tester.pumpAndSettle();
+      await tester
+          .tap(find.byKey(const ValueKey('settingsLangItem_main_cs')));
+      await tester.pumpAndSettle();
+
+      // Set swapped: main=cs, second=en. Verify via the top-bar pills.
+      expect(topBarPillText('CZ'), findsOneWidget);
+      expect(topBarPillText('EN'), findsOneWidget);
+      expect(topBarPillText('UK'), findsNothing);
+    });
+
+    testWidgets('picking a non-conflicting language as main works',
+        (tester) async {
+      await pumpApp(tester, prefs: {
+        'main_lang': 'en',
+        'second_lang': 'cs',
+      }); // main=en, second=cs
+      await openSettings(tester);
+
+      await tester
+          .tap(find.byKey(const ValueKey('settingsLangDropdown_main')));
+      await tester.pumpAndSettle();
+      await tester
+          .tap(find.byKey(const ValueKey('settingsLangItem_main_uk')));
+      await tester.pumpAndSettle();
+
+      expect(topBarPillText('UK'), findsOneWidget);
+      expect(topBarPillText('CZ'), findsOneWidget);
+      expect(topBarPillText('EN'), findsNothing);
+    });
+
+    testWidgets('close button has an accessible tooltip label',
+        (tester) async {
+      await pumpApp(tester);
+      await openSettings(tester);
+
+      expect(find.byTooltip(en.closeLabel), findsOneWidget);
+    });
+  });
+
+  group('First run / device-language seeding', () {
     testWidgets(
         'device cs first run: Czech chrome, single language, hidden toggle',
         (tester) async {
@@ -77,7 +206,7 @@ void runAddendum04Suite() {
     });
   });
 
-  group('ADDENDUM-04 · second-language Switch', () {
+  group('Second-language Switch', () {
     testWidgets(
         'off: hint shown, no dropdown, toggle hidden; on: dropdown with a '
         'default != main and toggle visible; off again undoes both',
@@ -136,7 +265,7 @@ void runAddendum04Suite() {
     });
   });
 
-  group('ADDENDUM-04 · ADR-0002 locale pin', () {
+  group('ADR-0002 locale pin', () {
     testWidgets(
         'flipping the active language keeps chrome in main; board + voice '
         'flip', (tester) async {
@@ -207,12 +336,10 @@ void runAddendum04Suite() {
     });
   });
 
-  group('ADDENDUM-04 · dropdown field', () {
-    // The phrase input is the dialog's other input — the dropdown must
-    // match its height at every text scale (kids' tablets commonly run
-    // accessibility font scaling; a fixed-height dropdown shrinks relative
-    // to inputs that scale). The two inputs live in different categories
-    // now (ADDENDUM-05), so the measurement spans two rail visits.
+  group('Dropdown field', () {
+    // The phrase input is the dialog's other input — the dropdown must match
+    // its height at every text scale. The two inputs live in different
+    // categories now (ADDENDUM-05), so the measurement spans two rail visits.
     Future<void> expectDropdownMatchesInput(WidgetTester tester) async {
       await pumpApp(tester, prefs: {
         'main_lang': 'en',
@@ -225,9 +352,8 @@ void runAddendum04Suite() {
           .getSize(find.byKey(const ValueKey('settingsLangDropdown_main')))
           .height;
 
-      // Phrases category: the add row is pinned to the pane bottom, outside
-      // the scroll view, so the field is on screen at every text scale — no
-      // scrolling to reach it.
+      // Phrases category: the add row is pinned to the pane bottom, on screen
+      // at every text scale — no scrolling to reach it.
       await openCategory(tester, 'phrases');
       final input = find.byType(TextField);
       final inputH = tester.getSize(input).height;
@@ -251,7 +377,7 @@ void runAddendum04Suite() {
     });
   });
 
-  group('ADDENDUM-04 · persistence', () {
+  group('Persistence', () {
     testWidgets('set + active language survive a restart', (tester) async {
       await pumpApp(tester, prefs: {
         'main_lang': 'en',
@@ -278,112 +404,26 @@ void runAddendum04Suite() {
 }
 
 // ---------------------------------------------------------------------------
-// Harness (mirrors ADDENDUM-03; duplicated to keep suites independent)
+// Finder helpers (ported from the ADDENDUM-03/04 suites)
 // ---------------------------------------------------------------------------
 
-Map<String, String> _voice(String locale) => {'name': locale, 'locale': locale};
-final _defaultVoices = [_voice('en-US'), _voice('cs-CZ')];
-
-/// Live pieces of a pumped app a test may want to inspect/mutate.
-class TestApp {
-  TestApp(this.storage, this.tts);
-
-  final StorageService storage;
-  final FakeTts tts;
-}
-
-/// Records every `flutter_tts` platform-channel call so tests can assert on
-/// exactly what the TTS engine would receive, and answers `getVoices` with a
-/// mutable [voices] list (defaults to en/cs only).
-class FakeTts {
-  final List<MethodCall> calls = [];
-  List<Map<String, String>> voices = List.of(_defaultVoices);
-
-  List<String> get spokenTexts => [
-        for (final call in calls)
-          if (call.method == 'speak')
-              call.arguments is Map
-                  ? (call.arguments as Map)['text'] as String
-                  : call.arguments as String,
-      ];
-
-  void install() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(const MethodChannel('flutter_tts'),
-            (call) async {
-      calls.add(call);
-      switch (call.method) {
-        case 'isLanguageAvailable':
-          return true;
-        case 'getVoices':
-          return voices;
-        default:
-          return 1;
-      }
-    });
-  }
-}
-
-/// Boots the real app root on a landscape-tablet viewport, storage seeded
-/// from [prefs]; [deviceLocale] is what the platform reports at first run
-/// (only consulted when no `main_lang` is stored — fresh install).
-Future<TestApp> pumpApp(
-  WidgetTester tester, {
-  Map<String, Object> prefs = const {},
-  Locale? deviceLocale,
-}) async {
-  tester.view.physicalSize = const Size(1280, 800);
-  tester.view.devicePixelRatio = 1.0;
-  addTearDown(tester.view.reset);
-
-  SharedPreferences.setMockInitialValues(prefs);
-  final tts = FakeTts()..install();
-
-  final storage = StorageService();
-  await storage.init();
-  final speech = SpeechService();
-  await speech.init();
-  final settings = SettingsController(storage)..load();
-  final phrases = PhrasesController(storage)..load();
-  final composer = ComposerController();
-  final language = LanguageController(storage, speech, composer)
-    ..load(deviceLocale: deviceLocale);
-
-  await tester.pumpWidget(HandySpeakApp(
-    storage: storage,
-    speech: speech,
-    settings: settings,
-    phrases: phrases,
-    composer: composer,
-    language: language,
-  ));
-  await tester.pumpAndSettle();
-  return TestApp(storage, tts);
-}
-
-T readProvider<T>(WidgetTester tester) =>
-    Provider.of<T>(tester.element(find.byType(HomePage)), listen: false);
-
-/// Opens the settings dialog via the gear icon and waits for the open
-/// animation to finish.
 Future<void> openSettings(WidgetTester tester) async {
   await tester.tap(find.byIcon(Icons.settings_outlined));
   await tester.pumpAndSettle();
 }
 
-/// Opens a Settings category from the rail (`language`, `phrases`,
-/// `accessibility`). The dialog always opens on Language, so anything in
-/// another category needs this first.
-Future<void> openCategory(WidgetTester tester, String name) async {
-  await tester.tap(find.byKey(ValueKey('settingsCategory_$name')));
+/// Closes the settings dialog via the pane header's close button by its tooltip
+/// label (the phrase rows reuse `Icons.close`; the label follows the main
+/// language per ADR-0002, so pass the localized [closeLabel]).
+Future<void> closeSettings(WidgetTester tester, String closeLabel) async {
+  await tester.tap(find.byTooltip(closeLabel));
   await tester.pumpAndSettle();
 }
 
-/// Closes the settings dialog via the pane header's close button by its
-/// tooltip label (the phrase rows reuse `Icons.close`; the label follows the
-/// main language per ADR-0002, so pass the localized [closeLabel]).
-Future<void> closeSettings(WidgetTester tester, String closeLabel) async {
-  await tester.tap(find.byTooltip(closeLabel));
+/// Opens a Settings category from the rail (`language`, `phrases`,
+/// `accessibility`). The dialog always opens on Language.
+Future<void> openCategory(WidgetTester tester, String name) async {
+  await tester.tap(find.byKey(ValueKey('settingsCategory_$name')));
   await tester.pumpAndSettle();
 }
 

@@ -5,7 +5,7 @@ import 'package:handy_speak/l10n/app_localizations_en.dart';
 import 'package:handy_speak/state/composer_controller.dart';
 import 'package:handy_speak/widgets/keyboard_view.dart';
 
-import 'support/app_harness.dart';
+import '../support/app_harness.dart';
 
 /// Forgiving-tap / accessibility feature suite, seeded from the retired keytap
 /// tests during the testing-prep stage. Pins the `ForgivingTap`

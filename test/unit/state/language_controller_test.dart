@@ -376,6 +376,35 @@ void main() {
       expect(lang2.set, [AppLanguage.en]);
     });
   });
+
+  group('LanguageController · setLanguage clears only the sentence', () {
+    test('an EN⇄CS switch wipes the sentence but preserves the math problem',
+        () async {
+      final (lang, _, composer, _) = await boot();
+
+      // Seed both workspaces.
+      composer.setMode(InputMode.math);
+      composer.appendMathDigit('3');
+      composer.appendMathOp('+');
+      composer.appendMathDigit('4');
+      composer.setMode(InputMode.keyboard);
+      composer.addChar('h');
+      composer.addChar('i');
+
+      lang.setLanguage(AppLanguage.cs);
+
+      // Active (keyboard) buffer is the sentence — cleared.
+      expect(composer.text, '');
+      // Math survived.
+      composer.setMode(InputMode.math);
+      expect(composer.text.trim(), '3 + 4');
+
+      // And switching back still has it.
+      lang.setLanguage(AppLanguage.en);
+      composer.setMode(InputMode.math);
+      expect(composer.text.trim(), '3 + 4');
+    });
+  });
 }
 
 /// Minimal `flutter_tts` platform-channel fake: records calls and answers

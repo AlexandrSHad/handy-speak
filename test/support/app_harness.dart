@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:handy_speak/main.dart';
 import 'package:handy_speak/services/speech_service.dart';
@@ -66,12 +67,17 @@ class FakeTts {
 }
 
 /// Boots the real app root on a landscape-tablet viewport, storage seeded
-/// from [prefs].
+/// from [prefs]. [screen] sizes the viewport (defaults to 1280×800, comfortably
+/// above the settings-dialog breakpoint); [deviceLocale] is what the platform
+/// reports at first run (only consulted when no `main_lang` is stored — a fresh
+/// install), for the language-seeding behaviours.
 Future<TestApp> pumpApp(
   WidgetTester tester, {
   Map<String, Object> prefs = const {},
+  Size screen = const Size(1280, 800),
+  Locale? deviceLocale,
 }) async {
-  tester.view.physicalSize = const Size(1280, 800);
+  tester.view.physicalSize = screen;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
@@ -85,7 +91,8 @@ Future<TestApp> pumpApp(
   final settings = SettingsController(storage)..load();
   final phrases = PhrasesController(storage)..load();
   final composer = ComposerController();
-  final language = LanguageController(storage, speech, composer)..load();
+  final language = LanguageController(storage, speech, composer)
+    ..load(deviceLocale: deviceLocale);
 
   await tester.pumpWidget(HandySpeakApp(
     storage: storage,

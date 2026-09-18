@@ -48,7 +48,8 @@ the lightweight `TestWidgetsFlutterBinding` when a controller needs mocked
 plugins. These are the fastest tests and cover translation/formatting logic,
 enum resolution, controller state transitions, and static-data invariants.
 
-_Lives in:_ `test/`. _Runs with:_ `puro flutter test`.
+_Lives in:_ `test/unit/` — one file per source file, mirroring `lib/` (classic
+layout). _Runs with:_ `puro flutter test`.
 
 ### Behavior tests
 Flutter's **widget tests**, which — despite the confusing name — run **headless
@@ -65,7 +66,8 @@ interacts with" gets covered.
 > because Flutter's own `integration_test/` folder already claims that meaning —
 > calling the headless tier "integration tests" would collide with the framework.
 
-_Lives in:_ `test/`. _Runs with:_ `puro flutter test`.
+_Lives in:_ `test/behavior/` — one suite per feature (§4). _Runs with:_
+`puro flutter test`.
 
 ### Device smoke
 A single thin on-device suite that boots the app on a real Android device and
@@ -74,15 +76,23 @@ can't prove out). It is a **per-release sanity check, not per-feature coverage**
 it exists to catch "the whole thing doesn't start on real hardware", which the
 headless tiers structurally cannot see.
 
-_Lives in:_ `integration_test/`. _Runs manually:_
+_Lives in:_ `integration_test/` — unchanged; Flutter mandates this folder name
+for on-device runs, and it holds this one smoke suite only. _Runs manually:_
 `puro flutter test integration_test/<smoke>_test.dart -d <device>`. Android-only
 today (see §7).
 
 ## 4. Feature map
 
-Tests are organised **by feature**, one suite per feature. Each feature below
-lists what its Unit and Behavior coverage means — as guidance, not a scored
-checklist.
+This map is organised **by feature**, and each feature below lists what its Unit
+and Behavior coverage means — as guidance, not a scored checklist. The
+sub-bullets are the acceptance units.
+
+The two tiers live on **different axes**, so read the bullets accordingly. The
+_Behavior_ bullets describe suites that physically live by feature in
+`test/behavior/<feature>`. The _Unit_ bullets describe **what to assert**, but
+the Unit tests themselves live in `test/unit/` mirroring the `lib/` source file
+under test (classic "test the file" layout) — a feature's Unit bullet may map to
+one mirrored file or span several, wherever the logic it names actually lives.
 
 ### Message composition
 The shared sentence buffer and its word-tiles: appending characters and words,
@@ -155,7 +165,7 @@ The release-within-bounds tap contract for children whose fingers drift.
   and is fully inert when `onTap` is null — the passing key-tap behaviours migrate
   here.
 
-## 5. Migration: from addendum suites to feature suites
+## 5. Migration: from addendum suites to tier folders
 
 ### Why by feature, not by addendum
 
@@ -169,12 +179,19 @@ behaviour live where you'd look for them.
 
 ### The mapping
 
-The existing addendum suites are **cross-cutting**: each touches several features.
-Migration means splitting each suite's groups out to the feature suite they
-belong under, reusing the existing assertions where they still hold. The addendum
-naming then disappears.
+The existing addendum suites are **cross-cutting**: each touches several features
+and mixes behaviour-level checks with pure-logic assertions. Migration splits each
+suite along **both axes** of the new layout. Its behaviour-level groups move to the
+`test/behavior/<feature>` suite they belong under; its pure-logic assertions move
+to the mirrored `test/unit/<path>` file for the source they exercise (classic
+layout, §4). Existing assertions are reused wherever they still hold. Once a suite's
+groups are redistributed, the addendum naming and the addendum suite files
+themselves disappear.
 
-| Existing suite | Groups redistribute to |
+The table below reads by feature, not by destination file — a single addendum row
+fans out into both `test/behavior/` suites and `test/unit/` mirrors.
+
+| Existing suite | Redistributes to (by feature) |
 | --- | --- |
 | `addendum01` | Keyboard input (big letters) · Saved phrases (phrase strip) · Settings (toggles) |
 | `addendum02` | Math board · Message composition (dual workspaces) · Language (Czech inline numbers) |
