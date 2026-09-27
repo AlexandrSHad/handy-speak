@@ -51,6 +51,11 @@ class FakeTtsEngine implements TtsEngine {
   String? language;
   bool stopped = false;
 
+  /// The flag the last `awaitSpeakCompletion` call carried — lets tests pin
+  /// the service's queue-mode contract (must be `false`; see
+  /// [FakeTtsEngine] class doc and the flutter_tts speak-while-speaking drop).
+  bool? requestedAwaitSpeakCompletion;
+
   /// Directly drives the speaking-state callback [SpeechService] registered,
   /// so a unit test can assert the service's status transitions without a
   /// real playback round-trip. No-op before init has wired the callback.
@@ -60,6 +65,7 @@ class FakeTtsEngine implements TtsEngine {
   Future<void> awaitSpeakCompletion(bool awaitCompletion) {
     if (throwOnInit) throw Exception('awaitSpeakCompletion boom');
     if (hangInit) return _neverCompletes.future;
+    requestedAwaitSpeakCompletion = awaitCompletion;
     return Future<void>.value();
   }
 

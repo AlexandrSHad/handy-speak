@@ -41,6 +41,22 @@ class SpeechService extends ChangeNotifier {
   SpeechStatus get status => _status;
   bool get isReady => _status == SpeechStatus.ready;
 
+  /// The engine's collapse of its five speaking-state handlers (registered
+  /// in [_bind]). Events only drive [isSpeaking] for **main-channel**
+  /// utterances (the Speak button): typing-feedback utterances share the
+  /// audio channel but their start/end events are dropped, so the button
+  /// never flickers on a keystroke. [_mainUtterance] is set by the newest
+  /// [speak] call — the plugin fires these events around playback, so by the
+  /// time one arrives it belongs to that newest utterance.
+  void _onEngineSpeakingState(bool speaking) {
+    if (!_mainUtterance) return;
+    _setSpeaking(speaking);
+  }
+
+  /// Whether the newest utterance is a main-channel one (see
+  /// [_onEngineSpeakingState]).
+  bool _mainUtterance = true;
+
   String _locale = 'en-US';
 
   late final Future<void> _ready;
@@ -66,12 +82,19 @@ class SpeechService extends ChangeNotifier {
 
   /// The actual (slow) engine setup, bounded by [_initTimeout] in [_init].
   Future<void> _bind() async {
-    // Make speak() future resolve on completion so isSpeaking is reliable.
-    await _engine.awaitSpeakCompletion(true);
+    // Deliberately NOT awaiting speak completion. flutter_tts 4.x (Android)
+    // discards any speak() that arrives while a previous one is still
+    // awaiting completion — with the flag on, a quickly-typed second letter
+    // was silently dropped (rapid a→s spoke only "a"). With it off, every
+    // speak() reaches the engine, where QUEUE_FLUSH natively preempts the
+    // playing utterance (the settled "newest intent wins" semantics).
+    // isSpeaking is driven by the engine-state events registered below, not
+    // by awaiting speak futures, so nothing else depends on the flag.
+    await _engine.awaitSpeakCompletion(false);
 
     // One signal collapses the plugin's five speaking-state handlers; the
     // adapter fans it back out to start/completion/cancel/pause/error.
-    _engine.onSpeakingStateChanged = _setSpeaking;
+    _engine.onSpeakingStateChanged = _onEngineSpeakingState;
 
     // Call the engine directly, NOT the public setLanguage(): that one is gated
     // on [isReady], which is still false here, so it would no-op.
@@ -110,17 +133,32 @@ class SpeechService extends ChangeNotifier {
 
   /// Speaks [text] in the active language. [rate]/[pitch] are optional and
   /// unused by the POC (moods off, §2) — when null, the engine default stands.
-  Future<void> speak(String text, {double? rate, double? pitch}) async {
+  ///
+  /// [feedback] marks typing-feedback utterances (letter echo, finished
+  /// words, symbol/phrase confirmations). They share the single audio channel
+  /// — preempting whatever is playing and preempted by the next utterance —
+  /// but never drive [isSpeaking], so the Speak button doesn't flicker
+  /// "Speaking…" on every keystroke.
+  ///
+  /// The speak future resolves when the utterance is ENQUEUED, not played
+  /// (see [_bind]); [isSpeaking] for main-channel utterances is driven by the
+  /// engine's start/stop events via [_onEngineSpeakingState].
+  Future<void> speak(String text,
+      {double? rate, double? pitch, bool feedback = false}) async {
     if (!isReady || text.trim().isEmpty) return;
+    // The newest utterance defines the channel its engine events belong to.
+    _mainUtterance = !feedback;
     try {
+      // A new utterance ends the previous one's reign NOW: its cancel event
+      // would otherwise arrive after _mainUtterance flipped and be gated
+      // below, leaving a cancelled main utterance's isSpeaking stuck true.
+      _setSpeaking(false);
       await _engine.stop();
       if (rate != null) await _engine.setSpeechRate(rate);
       if (pitch != null) await _engine.setPitch(pitch);
-      _setSpeaking(true);
       await _engine.speak(text);
-      // With awaitSpeakCompletion(true) this resolves when playback ends.
-      _setSpeaking(false);
     } catch (_) {
+      // Defensive clear: never leave the button stuck if the engine throws.
       _setSpeaking(false);
     }
   }

@@ -12,6 +12,7 @@ import 'state/composer_controller.dart';
 import 'state/language_controller.dart';
 import 'state/phrases_controller.dart';
 import 'state/settings_controller.dart';
+import 'state/speech_feedback_controller.dart';
 import 'widgets/home_page.dart';
 
 Future<void> main() async {
@@ -38,6 +39,16 @@ Future<void> main() async {
   final language = LanguageController(storage, speech, composer)
     ..load(deviceLocale: WidgetsBinding.instance.platformDispatcher.locale);
 
+  // Typing speech feedback (letter echo / finished words / symbol & phrase
+  // taps): a listener outside the widget tree — nothing renders from it, but
+  // the Provider below keeps it alive alongside the controllers it reads.
+  final speechFeedback = SpeechFeedbackController(
+    composer: composer,
+    settings: settings,
+    language: language,
+    speech: speech,
+  );
+
   runApp(HandySpeakApp(
     storage: storage,
     speech: speech,
@@ -45,6 +56,7 @@ Future<void> main() async {
     phrases: phrases,
     composer: composer,
     language: language,
+    speechFeedback: speechFeedback,
   ));
 }
 
@@ -57,6 +69,7 @@ class HandySpeakApp extends StatelessWidget {
     required this.phrases,
     required this.composer,
     required this.language,
+    required this.speechFeedback,
   });
 
   final StorageService storage;
@@ -65,6 +78,7 @@ class HandySpeakApp extends StatelessWidget {
   final PhrasesController phrases;
   final ComposerController composer;
   final LanguageController language;
+  final SpeechFeedbackController speechFeedback;
 
   @override
   Widget build(BuildContext context) {
@@ -76,6 +90,7 @@ class HandySpeakApp extends StatelessWidget {
         ChangeNotifierProvider.value(value: phrases),
         ChangeNotifierProvider.value(value: composer),
         ChangeNotifierProvider.value(value: language),
+        Provider<SpeechFeedbackController>.value(value: speechFeedback),
       ],
       child: Consumer2<LanguageController, SettingsController>(
         builder: (context, lang, settings, _) {

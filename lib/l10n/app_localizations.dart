@@ -358,6 +358,60 @@ abstract class AppLocalizations {
   /// **'Hidden on the board — phrases stay saved here and come back when you switch this on.'**
   String get settingsPhrasesHiddenNote;
 
+  /// No description provided for @settingsSpeechFeedback.
+  ///
+  /// In en, this message translates to:
+  /// **'Speech feedback'**
+  String get settingsSpeechFeedback;
+
+  /// No description provided for @settingsSpeakLettersName.
+  ///
+  /// In en, this message translates to:
+  /// **'Read letters while typing'**
+  String get settingsSpeakLettersName;
+
+  /// No description provided for @settingsSpeakLettersDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Each letter and number is spoken as it is typed.'**
+  String get settingsSpeakLettersDesc;
+
+  /// No description provided for @settingsSpeakWordsName.
+  ///
+  /// In en, this message translates to:
+  /// **'Read finished words'**
+  String get settingsSpeakWordsName;
+
+  /// No description provided for @settingsSpeakWordsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'A word is spoken when finished with the space or a punctuation key.'**
+  String get settingsSpeakWordsDesc;
+
+  /// No description provided for @settingsSpeakSymbolsName.
+  ///
+  /// In en, this message translates to:
+  /// **'Read symbols on tap'**
+  String get settingsSpeakSymbolsName;
+
+  /// No description provided for @settingsSpeakSymbolsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Tapping a symbol speaks its word right away.'**
+  String get settingsSpeakSymbolsDesc;
+
+  /// No description provided for @settingsSpeakPhrasesName.
+  ///
+  /// In en, this message translates to:
+  /// **'Read selected phrases'**
+  String get settingsSpeakPhrasesName;
+
+  /// No description provided for @settingsSpeakPhrasesDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Choosing a phrase speaks it right away.'**
+  String get settingsSpeakPhrasesDesc;
+
   /// No description provided for @preparingVoice.
   ///
   /// In en, this message translates to:

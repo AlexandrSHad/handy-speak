@@ -1,3 +1,5 @@
+import 'dart:async';
+
 // ignore: depend_on_referenced_packages
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -273,4 +275,118 @@ void main() {
       expect(engine.stopped, isFalse);
     });
   });
+
+  group('speak — feedback channel (typing echo)', () {
+    test(
+        'bind does NOT await speak completion: flutter_tts drops concurrent speaks',
+        () async {
+      // Regression: with awaitSpeakCompletion(true), flutter_tts 4.x silently
+      // discards any speak() that arrives while a previous one is still
+      // awaiting completion — quickly typing a→s spoke only "a". With the
+      // flag off, every utterance reaches the engine and QUEUE_FLUSH preempts
+      // the playing one natively.
+      final engine = FakeTtsEngine();
+      final speech = SpeechService(engine: engine);
+      await speech.init();
+
+      expect(engine.requestedAwaitSpeakCompletion, isFalse);
+    });
+
+    test('rapid-fire feedback utterances all reach the engine', () async {
+      // The service must never swallow or await-and-drop a newer echo: both
+      // letters are enqueued, the newest preempting the older engine-side.
+      final engine = FakeTtsEngine();
+      final speech = SpeechService(engine: engine);
+      await speech.init();
+
+      final first = speech.speak('a', feedback: true);
+      final second = speech.speak('s', feedback: true); // before first settles
+      await Future.wait([first, second]);
+
+      expect(engine.spoken, ['a', 's']);
+    });
+
+    test('feedback utterances never drive isSpeaking', () async {
+      final engine = FakeTtsEngine();
+      final speech = SpeechService(engine: engine);
+      await speech.init();
+
+      // The fake's speak() emits start/end engine events synchronously —
+      // both must be dropped for a feedback utterance, or the Speak button
+      // would flicker "Speaking…" on every keystroke.
+      var everSpeaking = false;
+      speech.addListener(() {
+        if (speech.isSpeaking) everSpeaking = true;
+      });
+
+      await speech.speak('a', feedback: true);
+      expect(engine.spoken, ['a']);
+      expect(speech.isSpeaking, isFalse);
+      expect(everSpeaking, isFalse);
+    });
+
+    test('a feedback utterance preempts a playing message', () async {
+      final engine = _HangingSpeakEngine();
+      final speech = SpeechService(engine: engine);
+      await speech.init();
+
+      final message = speech.speak('hello world');
+      await Future<void>.delayed(Duration.zero);
+      // isSpeaking is engine-event driven now — the hanging engine reports
+      // onStart when speak begins, so the message reads as mid-playback.
+      expect(speech.isSpeaking, isTrue);
+
+      engine.hangNextSpeak = false; // the echo itself may finish normally
+      await speech.speak('a', feedback: true);
+      await message;
+      expect(engine.spoken, ['hello world', 'a']);
+      expect(engine.stopped, isTrue); // preemption went through stop()
+      // The preempted message's utterance must not leave the flag stuck —
+      // the eager clear in speak() owns that now.
+      expect(speech.isSpeaking, isFalse);
+    });
+
+    test('a message preempts feedback and drives isSpeaking again', () async {
+      final engine = FakeTtsEngine();
+      final speech = SpeechService(engine: engine);
+      await speech.init();
+
+      await speech.speak('a', feedback: true);
+      await speech.speak('hello world');
+      expect(engine.spoken, ['a', 'hello world']);
+      expect(speech.isSpeaking, isFalse); // completed within the fake
+    });
+  });
+}
+
+/// A [FakeTtsEngine] that can hold its NEXT `speak` mid-playback until
+/// `stop()` cancels it — like a real engine where playback outlives the
+/// enqueue. Playback state is reported through the engine-state callback
+/// (start on speak, end on stop), mirroring how the real plugin reports it.
+class _HangingSpeakEngine extends FakeTtsEngine {
+  /// When true (the default), the next `speak` hangs until stopped; flip to
+  /// false for the preempting utterance so it completes normally.
+  bool hangNextSpeak = true;
+
+  Completer<void>? _pending;
+
+  @override
+  Future<void> speak(String text) {
+    if (throwOnSpeak) throw Exception('speak boom');
+    spoken.add(text);
+    emitSpeakingState(true);
+    if (!hangNextSpeak) {
+      emitSpeakingState(false);
+      return Future<void>.value();
+    }
+    _pending = Completer<void>();
+    return _pending!.future;
+  }
+
+  @override
+  Future<void> stop() {
+    _pending?.complete();
+    emitSpeakingState(false);
+    return super.stop();
+  }
 }

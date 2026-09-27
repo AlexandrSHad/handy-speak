@@ -440,8 +440,10 @@ class _AccessibilityPane extends StatelessWidget {
           title: l10n.settingsAccessibility,
           subtitle: l10n.settingsAccessibilityDesc,
         ),
-        // No inner section header: the pane header already says
-        // Accessibility (ADDENDUM-05 step 3).
+        // No inner section header for the three original rows: the pane
+        // header already says Accessibility (ADDENDUM-05 step 3). The speech
+        // feedback group is different — four related toggles that would read
+        // as a wall of switches without their own subgroup title.
         Expanded(
           child: _PaneScrollBody(
             child: Column(
@@ -467,6 +469,40 @@ class _AccessibilityPane extends StatelessWidget {
                   value: settings.dark,
                   onChanged: (v) =>
                       context.read<SettingsController>().setDark(v),
+                ),
+                const SizedBox(height: AppTokens.s32),
+                _SectionTitle(l10n.settingsSpeechFeedback),
+                _ToggleRow(
+                  name: l10n.settingsSpeakLettersName,
+                  desc: l10n.settingsSpeakLettersDesc,
+                  value: settings.speakLetters,
+                  onChanged: (v) => context
+                      .read<SettingsController>()
+                      .setSpeakLetters(v),
+                ),
+                _ToggleRow(
+                  name: l10n.settingsSpeakWordsName,
+                  desc: l10n.settingsSpeakWordsDesc,
+                  value: settings.speakWords,
+                  onChanged: (v) => context
+                      .read<SettingsController>()
+                      .setSpeakWords(v),
+                ),
+                _ToggleRow(
+                  name: l10n.settingsSpeakSymbolsName,
+                  desc: l10n.settingsSpeakSymbolsDesc,
+                  value: settings.speakSymbols,
+                  onChanged: (v) => context
+                      .read<SettingsController>()
+                      .setSpeakSymbols(v),
+                ),
+                _ToggleRow(
+                  name: l10n.settingsSpeakPhrasesName,
+                  desc: l10n.settingsSpeakPhrasesDesc,
+                  value: settings.speakPhrases,
+                  onChanged: (v) => context
+                      .read<SettingsController>()
+                      .setSpeakPhrases(v),
                 ),
               ],
             ),

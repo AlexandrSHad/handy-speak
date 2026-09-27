@@ -163,6 +163,36 @@ class AppLocalizationsUk extends AppLocalizations {
       'На дошці приховано — фрази зберігаються тут і повернуться після увімкнення.';
 
   @override
+  String get settingsSpeechFeedback => 'Мовний зворотний зв\'язок';
+
+  @override
+  String get settingsSpeakLettersName => 'Читати літери під час письма';
+
+  @override
+  String get settingsSpeakLettersDesc =>
+      'Кожна літера та цифра озвучується одразу після введення.';
+
+  @override
+  String get settingsSpeakWordsName => 'Читати завершені слова';
+
+  @override
+  String get settingsSpeakWordsDesc =>
+      'Слово озвучується, коли його завершено пробілом або розділовим знаком.';
+
+  @override
+  String get settingsSpeakSymbolsName => 'Читати символи після натискання';
+
+  @override
+  String get settingsSpeakSymbolsDesc =>
+      'Натискання на символ одразу озвучує його слово.';
+
+  @override
+  String get settingsSpeakPhrasesName => 'Читати фрази після вибору';
+
+  @override
+  String get settingsSpeakPhrasesDesc => 'Вибрана фраза одразу озвучується.';
+
+  @override
   String get preparingVoice => 'Готую голос…';
 
   @override

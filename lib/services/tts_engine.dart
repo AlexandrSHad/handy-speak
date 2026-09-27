@@ -7,8 +7,12 @@ import 'package:flutter_tts/flutter_tts.dart';
 /// The one production implementation, [FlutterTtsEngine], is the **only** place
 /// `package:flutter_tts` is imported — the rest of the app talks to [TtsEngine].
 abstract class TtsEngine {
-  /// See `FlutterTts.awaitSpeakCompletion`: makes the [speak] future resolve on
-  /// playback completion so speaking-state tracking is reliable.
+  /// See `FlutterTts.awaitSpeakCompletion`. Must be called with `false`:
+  /// flutter_tts 4.x drops any speak() that arrives while a previous one is
+  /// still awaiting completion (rapid letter echoes were silently skipped);
+  /// with it off, every utterance reaches the engine, whose native
+  /// QUEUE_FLUSH preempts the playing one, and playback state arrives via
+  /// [onSpeakingStateChanged] instead.
   Future<void> awaitSpeakCompletion(bool awaitCompletion);
 
   /// Collapses the plugin's five speaking-state handlers (start / completion /

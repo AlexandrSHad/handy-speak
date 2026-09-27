@@ -35,11 +35,11 @@ void main() {
       // The Big letters row must be the FIRST toggle in the Accessibility
       // category: the pane title above it, the haptics row below it.
       await openCategory(tester, 'accessibility');
-      await tester.scrollUntilVisible(
-        find.text(en.settingsHapticName),
-        100,
-        scrollable: settingsScrollable(),
-      );
+      // No pre-scroll here: the pane is scrollable since the speech-feedback
+      // rows landed, and scrollUntilVisible's trailing ensureVisible would
+      // scroll it — breaking the fixed-header-vs-rows comparison below. At
+      // the default 1280×800 viewport all three anchors are on screen at
+      // offset 0 (tapToggle below scrolls for itself).
       await tester.pumpAndSettle();
       // The category name renders twice — once in the rail, once as the pane
       // header title. The rail comes first in the Row, so `.last` is the

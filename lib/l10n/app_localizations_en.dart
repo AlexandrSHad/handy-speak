@@ -160,6 +160,37 @@ class AppLocalizationsEn extends AppLocalizations {
       'Hidden on the board — phrases stay saved here and come back when you switch this on.';
 
   @override
+  String get settingsSpeechFeedback => 'Speech feedback';
+
+  @override
+  String get settingsSpeakLettersName => 'Read letters while typing';
+
+  @override
+  String get settingsSpeakLettersDesc =>
+      'Each letter and number is spoken as it is typed.';
+
+  @override
+  String get settingsSpeakWordsName => 'Read finished words';
+
+  @override
+  String get settingsSpeakWordsDesc =>
+      'A word is spoken when finished with the space or a punctuation key.';
+
+  @override
+  String get settingsSpeakSymbolsName => 'Read symbols on tap';
+
+  @override
+  String get settingsSpeakSymbolsDesc =>
+      'Tapping a symbol speaks its word right away.';
+
+  @override
+  String get settingsSpeakPhrasesName => 'Read selected phrases';
+
+  @override
+  String get settingsSpeakPhrasesDesc =>
+      'Choosing a phrase speaks it right away.';
+
+  @override
   String get preparingVoice => 'Preparing voice…';
 
   @override

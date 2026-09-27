@@ -9,6 +9,7 @@ import 'package:handy_speak/state/composer_controller.dart';
 import 'package:handy_speak/state/language_controller.dart';
 import 'package:handy_speak/state/phrases_controller.dart';
 import 'package:handy_speak/state/settings_controller.dart';
+import 'package:handy_speak/state/speech_feedback_controller.dart';
 import 'package:handy_speak/widgets/home_page.dart';
 import 'package:handy_speak/widgets/keyboard_view.dart';
 import 'package:handy_speak/widgets/speak_button.dart';
@@ -33,6 +34,13 @@ void runDeviceSmokeSuite() {
     final composer = ComposerController();
     final language = LanguageController(storage, speech, composer)..load();
 
+    final speechFeedback = SpeechFeedbackController(
+      composer: composer,
+      settings: settings,
+      language: language,
+      speech: speech,
+    );
+
     await tester.pumpWidget(HandySpeakApp(
       storage: storage,
       speech: speech,
@@ -40,6 +48,7 @@ void runDeviceSmokeSuite() {
       phrases: phrases,
       composer: composer,
       language: language,
+      speechFeedback: speechFeedback,
     ));
     await tester.pumpAndSettle();
 

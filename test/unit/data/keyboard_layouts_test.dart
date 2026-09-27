@@ -94,14 +94,15 @@ void main() {
       expect(cs, az);
     });
 
-    test('exposes a diacritics/accent row of Czech letters', () {
+    test('exposes an accent row: ů/ú lead per logoped, rest in ČSN key order', () {
       final accentRow = kKeyboardLayouts[AppLanguage.cs]!
           .firstWhere((r) => r.type == KbRowType.accent);
-      expect(accentRow.keys, contains('č'));
-      expect(accentRow.keys, contains('ř'));
-      expect(accentRow.keys, contains('ž'));
-      expect(accentRow.keys, contains('ů'));
-      expect(accentRow.keys.length, 15);
+      // ů/ú lead (logoped-requested order; on the physical ČSN QWERTZ
+      // keyboard they sit on different rows). Then the number-row keys
+      // ě š č ř ž ý á í é left→right, then the dead-key letters ď ť ň, and
+      // ó (composed ´+o) last.
+      expect(accentRow.keys,
+          ['ů', 'ú', 'ě', 'š', 'č', 'ř', 'ž', 'ý', 'á', 'í', 'é', 'ď', 'ť', 'ň', 'ó']);
     });
 
     test('QWERTZ swap: Czech has z where English has y (top letter row)', () {

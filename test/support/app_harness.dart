@@ -8,6 +8,7 @@ import 'package:handy_speak/state/composer_controller.dart';
 import 'package:handy_speak/state/language_controller.dart';
 import 'package:handy_speak/state/phrases_controller.dart';
 import 'package:handy_speak/state/settings_controller.dart';
+import 'package:handy_speak/state/speech_feedback_controller.dart';
 import 'package:handy_speak/widgets/home_page.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -94,6 +95,15 @@ Future<TestApp> pumpApp(
   final language = LanguageController(storage, speech, composer)
     ..load(deviceLocale: deviceLocale);
 
+  // Mirrors main.dart: the feedback coordinator listens to the composer and
+  // turns input events into feedback-channel speech per the settings toggles.
+  final speechFeedback = SpeechFeedbackController(
+    composer: composer,
+    settings: settings,
+    language: language,
+    speech: speech,
+  );
+
   await tester.pumpWidget(HandySpeakApp(
     storage: storage,
     speech: speech,
@@ -101,6 +111,7 @@ Future<TestApp> pumpApp(
     phrases: phrases,
     composer: composer,
     language: language,
+    speechFeedback: speechFeedback,
   ));
   await tester.pumpAndSettle();
   return TestApp(storage, tts);

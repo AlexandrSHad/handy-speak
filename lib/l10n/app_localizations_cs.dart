@@ -161,6 +161,37 @@ class AppLocalizationsCs extends AppLocalizations {
       'Na tabulce skryto — fráze tu zůstávají uložené a vrátí se po zapnutí.';
 
   @override
+  String get settingsSpeechFeedback => 'Hlasová zpětná vazba';
+
+  @override
+  String get settingsSpeakLettersName => 'Číst písmena při psaní';
+
+  @override
+  String get settingsSpeakLettersDesc =>
+      'Každé písmeno a číslo se přečte hned, jak je napsáno.';
+
+  @override
+  String get settingsSpeakWordsName => 'Číst dokončená slova';
+
+  @override
+  String get settingsSpeakWordsDesc =>
+      'Slovo se přečte, jakmile je dokončeno mezerou nebo interpunkcí.';
+
+  @override
+  String get settingsSpeakSymbolsName => 'Číst symboly po klepnutí';
+
+  @override
+  String get settingsSpeakSymbolsDesc =>
+      'Klepnutí na symbol přečte jeho slovo.';
+
+  @override
+  String get settingsSpeakPhrasesName => 'Číst fráze po výběru';
+
+  @override
+  String get settingsSpeakPhrasesDesc =>
+      'Vybraná fráze se rovnou přečte nahlas.';
+
+  @override
   String get preparingVoice => 'Připravuji hlas…';
 
   @override
