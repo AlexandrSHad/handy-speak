@@ -46,3 +46,7 @@ app.*.map.json
 
 # Extracted handoff archive
 handoff/_extracted/
+
+# Local telemetry defines (Sentry DSN / environment) — copy from
+# dart_defines.example.json; a filled-in copy is never committed.
+dart_defines.json
