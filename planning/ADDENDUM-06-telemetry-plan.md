@@ -66,13 +66,13 @@ or the ARB files.
 
 ### Codebase facts that matter
 
-- **Seven silent `catch (_) {}` blocks**: six in `speech_service.dart`
+- **Six silent `catch (_) {}` blocks**: five in `speech_service.dart`
   (`_init` timeout/throw → `unavailable`; `setLanguage`;
-  `hasVoiceFor`; `speak`; `stop`) and one in `phrases_controller.dart:54-56`
+  `hasVoiceFor`; `speak`; `stop`) and one in `phrases_controller.dart:55`
   (corrupt stored JSON → falls back to seed phrases — silent data loss of a
   parent's saved phrases).
-- `StorageService.init()` (`storage_service.dart:14-16`) can throw and is
-  awaited uncaught in `main.dart:31` — the app cannot run without it, but
+- `StorageService.init()` (`storage_service.dart:8-10`) can throw and is
+  awaited uncaught in `main.dart:28` — the app cannot run without it, but
   today that failure is invisible.
 - `SpeechService` already has the `TtsEngine` injection seam
   (`tts_engine.dart`); `test/support/fake_tts_engine.dart` already has
@@ -122,7 +122,10 @@ A single new file, pure Dart except for the enabled-mode Sentry calls.
 **Compile-time config** (const, so a DSN change is a rebuild — accepted):
 `String.fromEnvironment('SENTRY_DSN')` and
 `String.fromEnvironment('SENTRY_ENVIRONMENT', defaultValue: 'development')`.
-`bool get enabled` = non-empty DSN.
+`bool get enabled` = non-empty DSN. The environment is allowlist-guarded:
+anything outside `development` / `preview` / `production` resolves to
+`development`, so a typo'd define cannot silently create an unalerted
+fourth environment bucket.
 
 **Internal event model, not Sentry types.** `captureError`,
 `addBreadcrumb`, the redaction transform and the allowlists operate on plain
@@ -156,7 +159,13 @@ the secret set = current composer text + its words of length ≥ 3
 a constant we can raise if diagnostics get over-redacted) + the utterance
 ring buffer (last 5, evict oldest). Replace every occurrence with
 `[redacted]` across exception value, exception message, event message and
-extras. Scope policy: scopes named in a `const _suppressMessageScopes =
+extras. Matches are **case-insensitive substrings** (`replaceAll`-style, no
+word boundaries): over-redaction inside words (`the` hitting `there`) is the
+accepted failure direction — a word-boundary match could miss
+concatenations, a case-sensitive one could miss re-cased echoes. The ledger
+tracks the **active** composer buffer only: on a math-mode switch the
+sentence buffer's words leave it — deliberate, math input is digits and
+symbols, not prose; anything spoken stays covered by the utterance ring. Scope policy: scopes named in a `const _suppressMessageScopes =
 {'phrases/load_corrupt'}` emit exception **type** + fixed description +
 tags, never the raw message.
 
@@ -170,6 +179,9 @@ seam; in disabled mode it is the only thing that happens. Exposed
 `framework/render` and `platform` respectively) in both modes — render
 errors can embed `Text` widget contents, so they flow through the same
 redaction, and the canary test can drive a real framework error headlessly.
+The `FlutterError.onError` hook **chains**: capture first, then forward to
+the handler it replaced — `flutter_test` installs its own handler that must
+keep seeing errors, and chaining is production-safe.
 
 **Init.** `SentryOptions configure(SentryOptions options)` (enabled mode
 only): `dsn`, `environment`, `tracesSampleRate =
@@ -287,11 +299,13 @@ mirrors the source):
 
 - No-DSN no-op: `enabled == false`; `configure` never runs; sink records but
   nothing can send.
-- Environment resolution: absent define → `development`; explicit → honored.
+- Environment resolution: absent define → `development`; explicit → honored;
+  unknown value → `development` (allowlist guard).
 - Redaction transform, case by case: full composer string; word ≥ 3 chars;
   1–2-char words untouched; utterance eviction at 5; `[redacted]` applied
   across exception value/message/extras; non-allowlisted tags and extras
-  stripped; allowlisted ones survive.
+  stripped; allowlisted ones survive; case-insensitive match (registered
+  `Hello` redacts `hello`); substring match inside words.
 - `beforeBreadcrumb` drops non-allowlisted names.
 - `phrases/load_corrupt` suppresses the message (exception type + tags
   only) even when the message contains a canary.
@@ -310,6 +324,14 @@ in the captured payload.
 
 **Behavior — `test/behavior/telemetry_test.dart`** (new file, on
 `test/support/app_harness.dart`): the canary suite from ADR-0004 —
+
+**Harness ownership**: `pumpApp` constructs a disabled `TelemetryService`,
+mirrors `main()`'s wiring (hooks — chained, see §1 — composer listener,
+injection into `SpeechService` / `PhrasesController`, `app_start`
+breadcrumb) under the file's existing "Mirrors main.dart" convention, and
+exposes it on `TestApp` beside `storage` and `tts`. One wiring, one sink for
+all four canaries; drift between `main()` and the harness stays a visible
+diff in the file whose job is mirroring.
 
 1. Type `CANARYQQ7X` via real keyboard taps; make the harness `FakeTts`
    throw on `speak` with a message embedding the canary (add an injectable
@@ -384,8 +406,12 @@ in the captured payload.
       the auto-release format. If release is bare or missing, set
       `handy_speak@kAppVersion` and note it here.
 - [ ] Trigger one real TTS failure path on-device (e.g. temporarily point
-      `setLanguage` at an unsupported locale in a scratch branch) and confirm
-      the issue arrives with readable frames.
+      `setLanguage` at an unsupported locale in a scratch branch — make the
+      thrown message embed a canary string) and confirm the issue arrives
+      with readable frames **and the canary replaced by `[redacted]`**:
+      this is the only live proof of the `configure()` → `beforeSend` →
+      transform → transport chain, which headless tests cannot exercise
+      (no DSN there, by design).
 - [ ] Confirm ANR detection presence/absence in project settings; record the
       knob if it needs configuring.
 - [ ] Remove the scratch changes; empty the DSN in the local define file.
