@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:handy_speak/main.dart';
 import 'package:handy_speak/services/speech_service.dart';
 import 'package:handy_speak/services/storage_service.dart';
+import 'package:handy_speak/services/telemetry_service.dart';
 import 'package:handy_speak/state/composer_controller.dart';
 import 'package:handy_speak/state/language_controller.dart';
 import 'package:handy_speak/state/phrases_controller.dart';
@@ -24,10 +25,15 @@ final _defaultVoices = [_voice('en-US'), _voice('cs-CZ')];
 
 /// Live pieces of a pumped app a test may want to inspect/mutate.
 class TestApp {
-  TestApp(this.storage, this.tts);
+  TestApp(this.storage, this.tts, this.telemetry);
 
   final StorageService storage;
   final FakeTts tts;
+
+  /// The app's telemetry — disabled (no DSN is ever compiled into tests),
+  /// so its sink is the only observable. Canary suites assert against it
+  /// (ADDENDUM-06).
+  final TelemetryService telemetry;
 }
 
 /// Records every `flutter_tts` platform-channel call so tests can assert on
@@ -41,6 +47,11 @@ class FakeTts {
   /// realistic "device without a Ukrainian pack" starting point these tests
   /// want. Mutate between actions to simulate a pack being installed.
   List<Map<String, String>> voices = List.of(_defaultVoices);
+
+  /// When set, every `speak` call throws with this message — drives the
+  /// tts/speak failure path end-to-end through the real engine adapter
+  /// (ADDENDUM-06 canary tests embed a canary here).
+  String? speakErrorMessage;
 
   List<String> get spokenTexts => [
         for (final call in calls)
@@ -60,6 +71,9 @@ class FakeTts {
           return true;
         case 'getVoices':
           return voices;
+        case 'speak':
+          if (speakErrorMessage != null) throw Exception(speakErrorMessage);
+          return 1;
         default:
           return 1;
       }
@@ -85,15 +99,28 @@ Future<TestApp> pumpApp(
   SharedPreferences.setMockInitialValues(prefs);
   final tts = FakeTts()..install();
 
+  // Mirrors main.dart (ADDENDUM-06): one disabled TelemetryService per app,
+  // wired exactly like main() — injected into the instrumented services,
+  // fed the composer text, hooks installed before the first frame, app_start
+  // breadcrumb after language.load. Exposed on TestApp for assertions.
+  final telemetry = TelemetryService();
+
   final storage = StorageService();
   await storage.init();
-  final speech = SpeechService();
+  final speech = SpeechService(telemetry: telemetry);
   await speech.init();
   final settings = SettingsController(storage)..load();
-  final phrases = PhrasesController(storage)..load();
+  final phrases = PhrasesController(storage, telemetry: telemetry)..load();
   final composer = ComposerController();
   final language = LanguageController(storage, speech, composer)
     ..load(deviceLocale: deviceLocale);
+
+  composer.addListener(() => telemetry.registerSecret(composer.text));
+  telemetry.addBreadcrumb('app_start', data: {
+    'ui_locale': language.mainLang.locale.toString(),
+    'main_lang': language.mainLang.key,
+    'second_lang': language.secondLang?.key ?? 'none',
+  });
 
   // Mirrors main.dart: the feedback coordinator listens to the composer and
   // turns input events into feedback-channel speech per the settings toggles.
@@ -103,6 +130,8 @@ Future<TestApp> pumpApp(
     language: language,
     speech: speech,
   );
+
+  telemetry.installErrorHooks();
 
   await tester.pumpWidget(HandySpeakApp(
     storage: storage,
@@ -114,7 +143,7 @@ Future<TestApp> pumpApp(
     speechFeedback: speechFeedback,
   ));
   await tester.pumpAndSettle();
-  return TestApp(storage, tts);
+  return TestApp(storage, tts, telemetry);
 }
 
 T readProvider<T>(WidgetTester tester) =>

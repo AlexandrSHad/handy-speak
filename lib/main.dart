@@ -1,12 +1,16 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'core/theme.dart';
 import 'l10n/app_localizations.dart';
 import 'services/speech_service.dart';
 import 'services/storage_service.dart';
+import 'services/telemetry_service.dart';
 import 'services/tts_engine.dart';
 import 'state/composer_controller.dart';
 import 'state/language_controller.dart';
@@ -18,46 +22,88 @@ import 'widgets/home_page.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Landscape tablet target (IMPLEMENTATION_PLAN §1).
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.landscapeLeft,
-    DeviceOrientation.landscapeRight,
-  ]);
+  // ADDENDUM-06 / ADR-0004: error telemetry. Without a compiled-in DSN
+  // (see dart_defines.example.json) nothing is initialised and nothing can
+  // send — `run()` below is the entire app, telemetry-dark except for the
+  // in-memory sink. Telemetry is deliberately NOT a provider: no widget
+  // consumes it (the Settings toggle is deferred by ADR-0004).
+  final telemetry = TelemetryService();
 
-  final storage = StorageService();
-  await storage.init();
+  Future<void> run() async {
+    // Landscape tablet target (IMPLEMENTATION_PLAN §1).
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
 
-  // TTS binds in the background (constructor); we deliberately do NOT await it
-  // so the first frame paints immediately instead of sitting on a white screen
-  // while the Android TTS service binds. The Speak button shows a spinner until
-  // SpeechService.status flips to ready (or an error if it never binds).
-  final speech = SpeechService(engine: FlutterTtsEngine());
+    final storage = StorageService();
+    try {
+      await storage.init();
+    } catch (e, st) {
+      // The app cannot run without storage; the capture adds context before
+      // the crash surfaces. Tags stay empty — nothing else is allowlisted.
+      unawaited(telemetry.captureError(e, st, scope: 'storage/init'));
+      rethrow;
+    }
 
-  final settings = SettingsController(storage)..load();
-  final phrases = PhrasesController(storage)..load();
-  final composer = ComposerController();
-  final language = LanguageController(storage, speech, composer)
-    ..load(deviceLocale: WidgetsBinding.instance.platformDispatcher.locale);
+    // TTS binds in the background (constructor); we deliberately do NOT await it
+    // so the first frame paints immediately instead of sitting on a white screen
+    // while the Android TTS service binds. The Speak button shows a spinner until
+    // SpeechService.status flips to ready (or an error if it never binds).
+    final speech =
+        SpeechService(engine: FlutterTtsEngine(), telemetry: telemetry);
 
-  // Typing speech feedback (letter echo / finished words / symbol & phrase
-  // taps): a listener outside the widget tree — nothing renders from it, but
-  // the Provider below keeps it alive alongside the controllers it reads.
-  final speechFeedback = SpeechFeedbackController(
-    composer: composer,
-    settings: settings,
-    language: language,
-    speech: speech,
-  );
+    final settings = SettingsController(storage)..load();
+    final phrases =
+        PhrasesController(storage, telemetry: telemetry)..load();
+    final composer = ComposerController();
+    final language = LanguageController(storage, speech, composer)
+      ..load(deviceLocale: WidgetsBinding.instance.platformDispatcher.locale);
 
-  runApp(HandySpeakApp(
-    storage: storage,
-    speech: speech,
-    settings: settings,
-    phrases: phrases,
-    composer: composer,
-    language: language,
-    speechFeedback: speechFeedback,
-  ));
+    // The redaction ledger tracks the composer text via its notifications —
+    // the controller stays unaware telemetry exists (ADDENDUM-06).
+    composer.addListener(() => telemetry.registerSecret(composer.text));
+
+    // Startup breadcrumb: metadata only, values known once language.load
+    // has settled (ADR-0002: the UI locale IS the main language).
+    telemetry.addBreadcrumb('app_start', data: {
+      'ui_locale': language.mainLang.locale.toString(),
+      'main_lang': language.mainLang.key,
+      'second_lang': language.secondLang?.key ?? 'none',
+    });
+
+    // Typing speech feedback (letter echo / finished words / symbol & phrase
+    // taps): a listener outside the widget tree — nothing renders from it, but
+    // the Provider below keeps it alive alongside the controllers it reads.
+    final speechFeedback = SpeechFeedbackController(
+      composer: composer,
+      settings: settings,
+      language: language,
+      speech: speech,
+    );
+
+    // Framework/platform errors can embed Text widget contents — the child's
+    // message — so they route through the same redaction. The hooks chain to
+    // whatever owned the handlers before them (ADDENDUM-06).
+    telemetry.installErrorHooks();
+
+    runApp(HandySpeakApp(
+      storage: storage,
+      speech: speech,
+      settings: settings,
+      phrases: phrases,
+      composer: composer,
+      language: language,
+      speechFeedback: speechFeedback,
+    ));
+  }
+
+  if (telemetry.enabled) {
+    await SentryFlutter.init(telemetry.configure, appRunner: run);
+  } else {
+    telemetry.warnIfDisabled();
+    await run();
+  }
 }
 
 class HandySpeakApp extends StatelessWidget {
