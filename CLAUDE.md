@@ -68,6 +68,8 @@ puro flutter test                      # Dart VM, no device — every test/*_tes
 puro flutter test integration_test/    # real integration tests (Android only, run manually with -d <device>)
 dart run flutter_launcher_icons   # regenerate app icons
 dart run flutter_native_splash:create   # regenerate native splash screens
+puro flutter run --dart-define-from-file=dart_defines.json   # telemetry on (copy dart_defines.example.json, fill DSN)
+puro flutter build apk --release --dart-define-from-file=dart_defines.json   # release build with telemetry
 ```
 
 Run every command through **Puro** (`puro flutter …` / `puro dart …`); `puro`
@@ -107,3 +109,9 @@ device (web unsupported, no desktop folders).
   (closed state = bare text line; never fixed heights — inputs must grow
   with system text scale; parity pinned by the addendum04 height tests).
 - **Brand color:** `#1fa567`. Theme tokens live in `lib/core/theme.dart`.
+- **Telemetry:** Sentry errors/crashes only (ADR-0004, ADDENDUM-06). The
+  DSN is public-by-design but never committed: `dart_defines.json` (repo
+  root, gitignored) is created from `dart_defines.example.json`; without it
+  telemetry compiles in disabled mode. `SENTRY_AUTH_TOKEN`, if ever needed
+  for debug-symbol upload, is an env var on the build machine — never a
+  define, never committed.
