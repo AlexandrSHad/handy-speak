@@ -8,4 +8,4 @@
 /// It MUST match `pubspec.yaml`. `test/app_version_test.dart` reads the
 /// pubspec and pins the two together, so bumping one without the other
 /// fails the headless test run.
-const String kAppVersion = '0.7.0';
+const String kAppVersion = '0.8.0';
