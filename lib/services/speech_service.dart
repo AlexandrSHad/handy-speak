@@ -1,6 +1,9 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/foundation.dart';
 
 import '../core/app_language.dart';
+import 'telemetry_service.dart';
 import 'tts_engine.dart';
 
 /// Readiness of the text-to-speech engine. The UI gates the Speak button on
@@ -24,11 +27,17 @@ class SpeechService extends ChangeNotifier {
   /// wiring passes a real [FlutterTtsEngine] (see `main.dart`); unit tests inject
   /// a fake. Defaulted so existing call sites keep working — the default lives in
   /// `tts_engine.dart`, so this class never imports `flutter_tts` itself.
-  SpeechService({TtsEngine? engine}) : _engine = engine ?? FlutterTtsEngine() {
+  /// [telemetry] is the ADDENDUM-06 capture seam; defaulted so tests and older
+  /// constructions stay unchanged (a default instance is disabled-mode and
+  /// records into a sink nobody reads).
+  SpeechService({TtsEngine? engine, TelemetryService? telemetry})
+      : _engine = engine ?? FlutterTtsEngine(),
+        _telemetry = telemetry ?? TelemetryService() {
     _ready = _init();
   }
 
   final TtsEngine _engine;
+  final TelemetryService _telemetry;
 
   /// Hard ceiling on the service bind. A hung engine must still resolve to
   /// [SpeechStatus.unavailable] so the "Preparing…" spinner can't spin forever.
@@ -72,11 +81,17 @@ class SpeechService extends ChangeNotifier {
     try {
       await _bind().timeout(_initTimeout);
       _status = SpeechStatus.ready;
-    } catch (_) {
+    } catch (e, st) {
       // Timed out or threw — the engine is unusable on this device.
       _status = SpeechStatus.unavailable;
+      unawaited(_telemetry.captureError(e, st,
+          scope: 'tts/init', tags: const {'tts_status': 'unavailable'}));
     } finally {
       notifyListeners();
+      // One breadcrumb per settled init (ADDENDUM-06) — later `init()` calls
+      // merely re-await the same future and must not duplicate it.
+      _telemetry.addBreadcrumb('tts_status',
+          data: {'tts_status': _status.name});
     }
   }
 
@@ -106,8 +121,11 @@ class SpeechService extends ChangeNotifier {
     if (!isReady) return;
     try {
       await _engine.setLanguage(locale);
-    } catch (_) {
+      _telemetry.addBreadcrumb('tts_language', data: {'ui_locale': locale});
+    } catch (e, st) {
       // Non-fatal: an unsupported locale must not crash composition.
+      unawaited(_telemetry.captureError(e, st,
+          scope: 'tts/set_language', tags: {'ui_locale': _locale}));
     }
   }
 
@@ -126,7 +144,8 @@ class SpeechService extends ChangeNotifier {
       // treated as a reason to fail-open the whole check.
       return voices.any((v) => v is Map && (v['locale']
           ?.toString().toLowerCase().startsWith(lang.key) ?? false));
-    } catch (_) {
+    } catch (e, st) {
+      unawaited(_telemetry.captureError(e, st, scope: 'tts/voices'));
       return true;
     }
   }
@@ -145,6 +164,9 @@ class SpeechService extends ChangeNotifier {
   /// engine's start/stop events via [_onEngineSpeakingState].
   Future<void> speak(String text,
       {double? rate, double? pitch, bool feedback = false}) async {
+    // Even a dropped utterance is a secret worth redacting (ADDENDUM-06) —
+    // register before any early return.
+    _telemetry.registerUtterance(text);
     if (!isReady || text.trim().isEmpty) return;
     // The newest utterance defines the channel its engine events belong to.
     _mainUtterance = !feedback;
@@ -157,9 +179,10 @@ class SpeechService extends ChangeNotifier {
       if (rate != null) await _engine.setSpeechRate(rate);
       if (pitch != null) await _engine.setPitch(pitch);
       await _engine.speak(text);
-    } catch (_) {
+    } catch (e, st) {
       // Defensive clear: never leave the button stuck if the engine throws.
       _setSpeaking(false);
+      unawaited(_telemetry.captureError(e, st, scope: 'tts/speak'));
     }
   }
 
@@ -167,8 +190,9 @@ class SpeechService extends ChangeNotifier {
     if (!isReady) return;
     try {
       await _engine.stop();
-    } catch (_) {
+    } catch (e, st) {
       // ignore
+      unawaited(_telemetry.captureError(e, st, scope: 'tts/stop'));
     }
     _setSpeaking(false);
   }

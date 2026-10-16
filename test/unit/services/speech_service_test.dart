@@ -5,6 +5,7 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:handy_speak/core/app_language.dart';
 import 'package:handy_speak/services/speech_service.dart';
+import 'package:handy_speak/services/telemetry_service.dart';
 
 import '../../support/fake_tts_engine.dart';
 
@@ -355,6 +356,111 @@ void main() {
       await speech.speak('hello world');
       expect(engine.spoken, ['a', 'hello world']);
       expect(speech.isSpeaking, isFalse); // completed within the fake
+    });
+  });
+
+  group('telemetry captures (ADDENDUM-06)', () {
+    test('a throwing bind captures one tts/init error with the unavailable '
+        'tag and one tts_status breadcrumb', () async {
+      final telemetry = TelemetryService();
+      final speech = SpeechService(
+        engine: FakeTtsEngine(throwOnInit: true),
+        telemetry: telemetry,
+      );
+      await speech.init();
+
+      expect(speech.status, SpeechStatus.unavailable);
+      expect(telemetry.capturedErrors, hasLength(1));
+      expect(telemetry.capturedErrors.single.scope, 'tts/init');
+      expect(telemetry.capturedErrors.single.tags['tts_status'],
+          'unavailable');
+      final statusCrumbs = telemetry.recordedBreadcrumbs
+          .where((c) => c.name == 'tts_status')
+          .toList();
+      expect(statusCrumbs, hasLength(1));
+      expect(statusCrumbs.single.data['tts_status'], 'unavailable');
+    });
+
+    test('a hung engine times out and captures tts/init', () {
+      fakeAsync((async) {
+        final telemetry = TelemetryService();
+        final speech = SpeechService(
+          engine: FakeTtsEngine(hangInit: true),
+          telemetry: telemetry,
+        );
+        async.elapse(const Duration(seconds: 17));
+
+        expect(speech.status, SpeechStatus.unavailable);
+        expect(telemetry.capturedErrors.single.scope, 'tts/init');
+      });
+    });
+
+    test('a healthy init emits exactly one ready tts_status breadcrumb and '
+        'no errors', () async {
+      final telemetry = TelemetryService();
+      final speech =
+          SpeechService(engine: FakeTtsEngine(), telemetry: telemetry);
+      await speech.init();
+      await speech.init(); // re-await must not duplicate the breadcrumb
+
+      expect(telemetry.capturedErrors, isEmpty);
+      final statusCrumbs = telemetry.recordedBreadcrumbs
+          .where((c) => c.name == 'tts_status')
+          .toList();
+      expect(statusCrumbs, hasLength(1));
+      expect(statusCrumbs.single.data['tts_status'], 'ready');
+    });
+
+    test('a throwing speak captures one tts/speak error; the utterance is '
+        'ledgered and redacted from the payload', () async {
+      final telemetry = TelemetryService();
+      final speech = SpeechService(
+        engine: FakeTtsEngine(
+          throwOnSpeak: true,
+          speakErrorMessage: 'engine refused CANARYQQ7X',
+        ),
+        telemetry: telemetry,
+      );
+      await speech.init();
+      await speech.speak('CANARYQQ7X');
+
+      expect(telemetry.capturedErrors, hasLength(1));
+      final captured = telemetry.capturedErrors.single;
+      expect(captured.scope, 'tts/speak');
+      expect(captured.message, contains('[redacted]'));
+      expect(captured.message?.contains('CANARYQQ7X'), isFalse);
+      // The utterance stays in the ledger for later payloads.
+      expect(telemetry.redact('later leak: CANARYQQ7X'),
+          'later leak: [redacted]');
+    });
+
+    test('a dropped utterance (engine unavailable) is still ledgered', () async {
+      final telemetry = TelemetryService();
+      final speech = SpeechService(
+        engine: FakeTtsEngine(throwOnInit: true),
+        telemetry: telemetry,
+      );
+      await speech.init();
+      await speech.speak('secret words');
+
+      // The init failure captured (tts/init); the dropped speak did not.
+      expect(telemetry.capturedErrors.map((e) => e.scope), ['tts/init']);
+      expect(telemetry.redact('leak: secret words'), 'leak: [redacted]');
+    });
+
+    test('a successful setLanguage emits a tts_language breadcrumb', () async {
+      final telemetry = TelemetryService();
+      final speech =
+          SpeechService(engine: FakeTtsEngine(), telemetry: telemetry);
+      await speech.init();
+
+      await speech.setLanguage('cs-CZ');
+
+      final crumbs = telemetry.recordedBreadcrumbs
+          .where((c) => c.name == 'tts_language')
+          .toList();
+      expect(crumbs, hasLength(1));
+      expect(crumbs.single.data['ui_locale'], 'cs-CZ');
     });
   });
 }

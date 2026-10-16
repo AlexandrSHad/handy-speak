@@ -1,3 +1,4 @@
+import 'dart:async' show unawaited;
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../core/app_language.dart';
 import '../data/phrases_data.dart';
 import '../services/storage_service.dart';
+import '../services/telemetry_service.dart';
 
 /// A quick phrase belonging to one language (IMPLEMENTATION_PLAN §6).
 @immutable
@@ -34,9 +36,11 @@ class Phrase {
 /// (IMPLEMENTATION_PLAN §6.1.4 / Task 7). Stored under `phrases_en` /
 /// `phrases_cs` as JSON.
 class PhrasesController extends ChangeNotifier {
-  PhrasesController(this._storage);
+  PhrasesController(this._storage, {TelemetryService? telemetry})
+      : _telemetry = telemetry ?? TelemetryService();
 
   final StorageService _storage;
+  final TelemetryService _telemetry;
   final Map<AppLanguage, List<Phrase>> _byLang = {};
 
   static String _key(AppLanguage l) => 'phrases_${l.key}';
@@ -52,8 +56,18 @@ class PhrasesController extends ChangeNotifier {
               .map((e) => Phrase.fromJson(e as Map<String, dynamic>))
               .toList();
           _byLang[lang] = list;
-        } catch (_) {
+        } catch (e, st) {
           _byLang[lang] = List.of(kSeedPhrases[lang] ?? const []);
+          // Silent data loss of a parent's saved phrases — report it
+          // (ADDENDUM-06). The exception message echoes the stored JSON (i.e.
+          // phrase text), so the scope policy suppresses it: type + tags
+          // only, `raw_length` is a number, never content (ADR-0004).
+          unawaited(_telemetry.captureError(e, st,
+              scope: 'phrases/load_corrupt',
+              tags: {
+                'phrases_lang': lang.key,
+                'raw_length': raw.length.toString(),
+              }));
         }
       }
     }

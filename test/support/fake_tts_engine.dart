@@ -18,12 +18,16 @@ import 'package:handy_speak/services/tts_engine.dart';
 /// - [throwOnInit] makes the bind throw (init must swallow it → `unavailable`);
 /// - [throwOnSpeak] makes [speak] throw (the service must swallow it and clear
 ///   the speaking flag).
+/// - [throwOnSpeak] makes [speak] throw (the service must swallow it and clear
+///   the speaking flag). The thrown message is [speakErrorMessage] when set —
+///   injectable so telemetry tests can embed a canary (ADDENDUM-06).
 class FakeTtsEngine implements TtsEngine {
   FakeTtsEngine({
     this.voices = const <dynamic>[],
     this.hangInit = false,
     this.throwOnInit = false,
     this.throwOnSpeak = false,
+    this.speakErrorMessage,
   });
 
   /// Raw shape [getVoices] returns. Tests pass a `List` of voice `Map`s, or a
@@ -42,6 +46,10 @@ class FakeTtsEngine implements TtsEngine {
 
   /// When true, [speak] throws — the service must swallow it, not rethrow.
   final bool throwOnSpeak;
+
+  /// The message that thrown speak exception carries when [throwOnSpeak] is
+  /// on; `null` keeps the historical fixed message.
+  final String? speakErrorMessage;
 
   final Completer<void> _neverCompletes = Completer<void>();
 
@@ -90,7 +98,7 @@ class FakeTtsEngine implements TtsEngine {
 
   @override
   Future<void> speak(String text) async {
-    if (throwOnSpeak) throw Exception('speak boom');
+    if (throwOnSpeak) throw Exception(speakErrorMessage ?? 'speak boom');
     _onSpeakingStateChanged?.call(true);
     spoken.add(text);
     _onSpeakingStateChanged?.call(false);

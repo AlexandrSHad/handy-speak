@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:handy_speak/core/app_language.dart';
 import 'package:handy_speak/data/phrases_data.dart';
 import 'package:handy_speak/services/storage_service.dart';
+import 'package:handy_speak/services/telemetry_service.dart';
 import 'package:handy_speak/state/phrases_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -23,11 +24,12 @@ void main() {
   // *before* load — key presence (`phrases_<lang>`) decides seed vs restore.
   Future<(PhrasesController, StorageService)> boot({
     Map<String, Object> prefs = const {},
+    TelemetryService? telemetry,
   }) async {
     SharedPreferences.setMockInitialValues(prefs);
     final storage = StorageService();
     await storage.init();
-    final phrases = PhrasesController(storage)..load();
+    final phrases = PhrasesController(storage, telemetry: telemetry)..load();
     return (phrases, storage);
   }
 
@@ -136,6 +138,34 @@ void main() {
 
       expect(phrases.phrasesFor(AppLanguage.cs),
           hasLength(kSeedPhrases[AppLanguage.cs]!.length));
+    });
+
+    test('corruption captures phrases/load_corrupt — type + tags only, no '
+        'stored content anywhere (ADDENDUM-06)', () async {
+      const raw = 'this is not json {{{ CANARYQQ7X';
+      final telemetry = TelemetryService();
+      final (phrases, _) = await boot(
+        prefs: {'phrases_en': raw},
+        telemetry: telemetry,
+      );
+
+      // The fallback still stands.
+      expect(phrases.phrasesFor(AppLanguage.en),
+          hasLength(kSeedPhrases[AppLanguage.en]!.length));
+
+      expect(telemetry.capturedErrors, hasLength(1));
+      final captured = telemetry.capturedErrors.single;
+      expect(captured.scope, 'phrases/load_corrupt');
+      expect(captured.exceptionType, 'FormatException');
+      // FormatException's message echoes the offending source — suppressed.
+      expect(captured.message, '[suppressed by scope policy]');
+      expect(captured.stackTrace, isNull);
+      expect(captured.tags['phrases_lang'], 'en');
+      expect(captured.tags['raw_length'], raw.length.toString());
+
+      final serialized = '${captured.message}${captured.stackTrace}'
+          '${captured.tags}${captured.extras}';
+      expect(serialized.contains('CANARYQQ7X'), isFalse);
     });
   });
 
