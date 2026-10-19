@@ -463,6 +463,137 @@ void main() {
       expect(crumbs.single.data['ui_locale'], 'cs-CZ');
     });
   });
+
+  group('speak timing transactions (ADDENDUM-07)', () {
+    test('a successful main-channel speak finishes spoken, with locale and '
+        'length tags and stop/submit children', () async {
+      final telemetry = TelemetryService();
+      final speech = SpeechService(
+          engine: FakeTtsEngine(), telemetry: telemetry);
+      await speech.init();
+
+      await speech.speak('hello world');
+
+      final transactions = telemetry.recordedTransactions;
+      expect(transactions, hasLength(1));
+      final tx = transactions.single;
+      expect(tx.scope, 'tts/speak');
+      expect(tx.rejected, isFalse);
+      expect(tx.tags['speak_outcome'], 'spoken');
+      expect(tx.tags['ui_locale'], 'en-US');
+      expect(tx.tags['raw_length'], '11');
+      expect(tx.childNames, ['stop', 'submit']);
+    });
+
+    test('typing-feedback utterances never start a transaction', () async {
+      final telemetry = TelemetryService();
+      final speech = SpeechService(
+          engine: FakeTtsEngine(), telemetry: telemetry);
+      await speech.init();
+
+      await speech.speak('a', feedback: true);
+
+      expect(telemetry.recordedTransactions, isEmpty);
+    });
+
+    test('a throwing speak closes the transaction as error (alongside the '
+        'ADDENDUM-06 error capture)', () async {
+      final telemetry = TelemetryService();
+      final speech = SpeechService(
+        engine: FakeTtsEngine(throwOnSpeak: true),
+        telemetry: telemetry,
+      );
+      await speech.init();
+
+      await speech.speak('hello');
+
+      final tx = telemetry.recordedTransactions.single;
+      expect(tx.scope, 'tts/speak');
+      expect(tx.tags['speak_outcome'], 'error');
+      expect(telemetry.capturedErrors.single.scope, 'tts/speak');
+    });
+
+    test('a second main speak before any start event supersedes the first; '
+        'the second stays open', () async {
+      final telemetry = TelemetryService();
+      final speech = SpeechService(
+          engine: _SilentSpeakEngine(), telemetry: telemetry);
+      await speech.init();
+
+      await speech.speak('one');
+      await speech.speak('two');
+
+      // Only the superseded first has finished; the second is still open.
+      final transactions = telemetry.recordedTransactions;
+      expect(transactions, hasLength(1));
+      expect(transactions.single.tags['speak_outcome'], 'superseded');
+
+      // Close the open one explicitly so no timeout timer dangles.
+      speech.debugFinishOpenSpeakTransaction();
+      expect(telemetry.recordedTransactions, hasLength(2));
+      expect(
+          telemetry.recordedTransactions.last.tags['speak_outcome'], 'stopped');
+    });
+
+    test('a typing-feedback utterance supersedes a pending main one and '
+        'starts no transaction of its own', () async {
+      final telemetry = TelemetryService();
+      final speech = SpeechService(
+          engine: _SilentSpeakEngine(), telemetry: telemetry);
+      await speech.init();
+
+      await speech.speak('hello world'); // open: silent engine, no start yet
+      await speech.speak('a', feedback: true);
+
+      final transactions = telemetry.recordedTransactions;
+      expect(transactions, hasLength(1));
+      expect(transactions.single.tags['speak_outcome'], 'superseded');
+
+      // Nothing is open now — the finisher must be a no-op, not a record.
+      speech.debugFinishOpenSpeakTransaction();
+      expect(telemetry.recordedTransactions, hasLength(1));
+    });
+
+    test('stop() before any start event closes the transaction as stopped',
+        () async {
+      final telemetry = TelemetryService();
+      final speech = SpeechService(
+          engine: _SilentSpeakEngine(), telemetry: telemetry);
+      await speech.init();
+
+      await speech.speak('hello');
+      await speech.stop();
+
+      final tx = telemetry.recordedTransactions.single;
+      expect(tx.scope, 'tts/speak');
+      expect(tx.tags['speak_outcome'], 'stopped');
+    });
+
+    test('a start event that never comes lands as timeout', () {
+      fakeAsync((async) {
+        SpeechService.speakTxTimeout = const Duration(milliseconds: 50);
+        addTearDown(() => SpeechService.speakTxTimeout =
+            const Duration(seconds: 10));
+
+        final telemetry = TelemetryService();
+        final speech = SpeechService(
+            engine: _SilentSpeakEngine(), telemetry: telemetry);
+        async.flushMicrotasks();
+        expect(speech.isReady, isTrue);
+
+        speech.speak('hello');
+        async.flushMicrotasks();
+        // Still open — the engine reported nothing.
+        expect(telemetry.recordedTransactions, isEmpty);
+
+        async.elapse(const Duration(milliseconds: 60));
+        final transactions = telemetry.recordedTransactions;
+        expect(transactions, hasLength(1));
+        expect(transactions.single.scope, 'tts/speak');
+        expect(transactions.single.tags['speak_outcome'], 'timeout');
+      });
+    });
+  });
 }
 
 /// A [FakeTtsEngine] that can hold its NEXT `speak` mid-playback until
@@ -494,5 +625,17 @@ class _HangingSpeakEngine extends FakeTtsEngine {
     _pending?.complete();
     emitSpeakingState(false);
     return super.stop();
+  }
+}
+
+/// A [FakeTtsEngine] whose `speak` enqueues but never reports playback
+/// state — models a real engine whose start callback is late or missing
+/// (the ADDENDUM-07 risk behind the `superseded`/`timeout` outcomes: some
+/// Android engines never fire start for very short utterances).
+class _SilentSpeakEngine extends FakeTtsEngine {
+  @override
+  Future<void> speak(String text) async {
+    if (throwOnSpeak) throw Exception(speakErrorMessage ?? 'speak boom');
+    spoken.add(text);
   }
 }

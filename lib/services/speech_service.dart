@@ -1,4 +1,4 @@
-import 'dart:async' show unawaited;
+import 'dart:async' show Timer, unawaited;
 
 import 'package:flutter/foundation.dart';
 
@@ -43,6 +43,21 @@ class SpeechService extends ChangeNotifier {
   /// [SpeechStatus.unavailable] so the "Preparing…" spinner can't spin forever.
   static const _initTimeout = Duration(seconds: 16);
 
+  /// Ceiling on a pending `tts/speak` transaction (ADDENDUM-07): engines
+  /// that fire `start` late (or never, for very short utterances) land as
+  /// `timeout` rather than dangling forever. Mutable for the timeout unit
+  /// test; the single tunable if Sentry shows timeout noise (see the
+  /// ADDENDUM-07 plan's risks).
+  @visibleForTesting
+  static Duration speakTxTimeout = const Duration(seconds: 10);
+
+  /// The open `tts/speak` transaction, if any (ADDENDUM-07). Null whenever
+  /// no main-channel utterance is between tap and first sound.
+  TelemetryTransaction? _speakTx;
+
+  /// The timeout guard armed alongside [_speakTx].
+  Timer? _speakTxTimer;
+
   bool _isSpeaking = false;
   bool get isSpeaking => _isSpeaking;
 
@@ -59,7 +74,23 @@ class SpeechService extends ChangeNotifier {
   /// time one arrives it belongs to that newest utterance.
   void _onEngineSpeakingState(bool speaking) {
     if (!_mainUtterance) return;
+    // First sound is the finish line of tts/speak (ADDENDUM-07): tap →
+    // start callback. Everything after is engine-driven playback, out of
+    // scope — the `(false)` branch deliberately does nothing.
+    if (speaking) _finishSpeak('spoken');
     _setSpeaking(speaking);
+  }
+
+  /// Ends the open `tts/speak` transaction with [outcome] (fixed
+  /// vocabulary: spoken / error / superseded / stopped / timeout) and
+  /// disarms its timeout. No-op when nothing is open.
+  void _finishSpeak(String outcome) {
+    _speakTxTimer?.cancel();
+    _speakTxTimer = null;
+    final tx = _speakTx;
+    if (tx == null || tx.isFinished) return;
+    _speakTx = null;
+    tx.finish(tags: {'speak_outcome': outcome});
   }
 
   /// Whether the newest utterance is a main-channel one (see
@@ -175,13 +206,34 @@ class SpeechService extends ChangeNotifier {
       // would otherwise arrive after _mainUtterance flipped and be gated
       // below, leaving a cancelled main utterance's isSpeaking stuck true.
       _setSpeaking(false);
+      // …and ends the previous one's transaction reign too (ADDENDUM-07):
+      // QUEUE_FLUSH means a preempted utterance's start event never arrives,
+      // so the pending tts/speak closes as superseded here — whether the
+      // preemptor is a rapid second Speak tap or a typing-feedback echo.
+      _finishSpeak('superseded');
+      final tx = feedback
+          ? null
+          : _telemetry.startTransaction('tts/speak', tags: {
+              'ui_locale': _locale,
+              'raw_length': text.length.toString(),
+            });
+      _speakTx = tx;
+      if (tx != null) {
+        _speakTxTimer = Timer(SpeechService.speakTxTimeout,
+            () => _finishSpeak('timeout'));
+      }
+      final stopSpan = tx?.child('stop');
       await _engine.stop();
+      stopSpan?.finish();
       if (rate != null) await _engine.setSpeechRate(rate);
       if (pitch != null) await _engine.setPitch(pitch);
+      final submitSpan = tx?.child('submit');
       await _engine.speak(text);
+      submitSpan?.finish();
     } catch (e, st) {
       // Defensive clear: never leave the button stuck if the engine throws.
       _setSpeaking(false);
+      _finishSpeak('error');
       unawaited(_telemetry.captureError(e, st, scope: 'tts/speak'));
     }
   }
@@ -194,8 +246,16 @@ class SpeechService extends ChangeNotifier {
       // ignore
       unawaited(_telemetry.captureError(e, st, scope: 'tts/stop'));
     }
+    _finishSpeak('stopped');
     _setSpeaking(false);
   }
+
+  /// Ends any open `tts/speak` transaction (outcome `stopped`) so no
+  /// 10 s timeout Timer survives into a test's teardown — the widget-test
+  /// framework fails on pending timers. Production never calls this; the
+  /// service lives for the app's whole lifetime (ADDENDUM-07).
+  @visibleForTesting
+  void debugFinishOpenSpeakTransaction() => _finishSpeak('stopped');
 
   void _setSpeaking(bool value) {
     if (_isSpeaking == value) return;
