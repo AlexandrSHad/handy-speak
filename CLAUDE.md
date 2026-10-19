@@ -109,7 +109,8 @@ device (web unsupported, no desktop folders).
   (closed state = bare text line; never fixed heights — inputs must grow
   with system text scale; parity pinned by the addendum04 height tests).
 - **Brand color:** `#1fa567`. Theme tokens live in `lib/core/theme.dart`.
-- **Telemetry:** Sentry errors/crashes only (ADR-0004, ADDENDUM-06). The
+- **Telemetry:** Sentry errors/crashes plus two timing transactions
+  (`tts/speak`, `tts/ready`; ADR-0004, ADDENDUM-06, ADDENDUM-07). The
   DSN is public-by-design but never committed: `dart_defines.json` (repo
   root, gitignored) is created from `dart_defines.example.json`; without it
   telemetry compiles in disabled mode. `SENTRY_AUTH_TOKEN`, if ever needed

@@ -421,7 +421,10 @@ diff in the file whose job is mirroring.
 - [ ] `SENTRY_ENVIRONMENT` = `preview` (sideload/tester) or `production`
       (Play); DSN present; build made **with** `--dart-define-from-file`.
 - [ ] Play Data safety form declares "Crash logs" only (first Play
-      submission).
+      submission). *(Superseded by ADDENDUM-07 §5: the honest set is Crash
+      logs + Diagnostics + Other app performance data + Device or other
+      IDs — the shipped SDK already sends sessions, app-start traces and a
+      per-install UUID.)*
 - [ ] No `--obfuscate` today → no `sentry_dart_plugin`; revisit both
       together.
 
