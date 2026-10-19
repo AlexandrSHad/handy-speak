@@ -30,6 +30,12 @@ Future<void> main() async {
   final telemetry = TelemetryService();
 
   Future<void> run() async {
+    // ADDENDUM-07: launch -> engine-ready transaction. Started before
+    // storage.init() deliberately — the child's wait covers everything the
+    // spinner can sit on. Finished by the one-shot listener below; the
+    // service's 16 s init ceiling guarantees it settles either way.
+    final readyTx = telemetry.startTransaction('tts/ready');
+
     // Landscape tablet target (IMPLEMENTATION_PLAN §1).
     await SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,
@@ -52,6 +58,17 @@ Future<void> main() async {
     // SpeechService.status flips to ready (or an error if it never binds).
     final speech =
         SpeechService(engine: FlutterTtsEngine(), telemetry: telemetry);
+
+    // ADDENDUM-07: tts/ready ends when the status first leaves
+    // `initializing` — same one-shot-listener pattern as the redaction
+    // ledger below. SpeechService stays unaware of the transaction.
+    void readyListener() {
+      if (speech.status == SpeechStatus.initializing) return;
+      speech.removeListener(readyListener);
+      readyTx.finish(tags: {'tts_status': speech.status.name});
+    }
+
+    speech.addListener(readyListener);
 
     final settings = SettingsController(storage)..load();
     final phrases =

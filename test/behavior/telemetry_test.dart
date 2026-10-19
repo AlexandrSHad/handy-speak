@@ -36,6 +36,13 @@ void main() {
         ..write(crumb.name)
         ..write(crumb.data);
     }
+    for (final tx in telemetry.recordedTransactions) {
+      buffer
+        ..write(tx.scope)
+        ..write(tx.tags)
+        ..write(tx.childNames)
+        ..write(tx.rejected);
+    }
     return buffer.toString();
   }
 
@@ -117,5 +124,75 @@ void main() {
         reason: 'unexpected breadcrumb name: ${crumb.name}',
       );
     }
+  });
+
+  testWidgets('a healthy boot finishes tts/ready with tts_status=ready '
+      '(ADDENDUM-07)', (tester) async {
+    final app = await pumpApp(tester);
+
+    final ready = app.telemetry.recordedTransactions
+        .where((t) => t.scope == 'tts/ready')
+        .toList();
+    expect(ready, hasLength(1));
+    expect(ready.single.rejected, isFalse);
+    expect(ready.single.tags['tts_status'], 'ready');
+    expect(allPayloads(app.telemetry).toLowerCase(), isNot(contains(canary)));
+  });
+
+  testWidgets('an engine that fails to bind finishes tts/ready with '
+      'tts_status=unavailable (ADDENDUM-07)', (tester) async {
+    final app = await pumpApp(tester, ttsInitErrorMessage: 'bind boom');
+
+    final ready = app.telemetry.recordedTransactions
+        .where((t) => t.scope == 'tts/ready')
+        .toList();
+    expect(ready, hasLength(1));
+    expect(ready.single.tags['tts_status'], 'unavailable');
+  });
+
+  testWidgets('a Speak tap produces a spoken tts/speak transaction without '
+      'the canary (ADDENDUM-07)', (tester) async {
+    final app = await pumpApp(tester);
+    await typeCanary(tester);
+
+    await tester.tap(find.text(en.speak));
+    await tester.pumpAndSettle();
+    // The fake raises the platform's onStart/onDone pair by itself, like a
+    // real engine — first sound is what finishes the transaction.
+
+    final spoken = app.telemetry.recordedTransactions
+        .where((t) => t.scope == 'tts/speak')
+        .toList();
+    expect(spoken, hasLength(1));
+    expect(spoken.single.rejected, isFalse);
+    expect(spoken.single.tags['speak_outcome'], 'spoken');
+    expect(spoken.single.tags['raw_length'], canary.length.toString());
+    expect(spoken.single.childNames, containsAll(['stop', 'submit']));
+    expect(allPayloads(app.telemetry).toLowerCase(), isNot(contains(canary)));
+  });
+
+  testWidgets('a speak that never starts is superseded by the next tap '
+      'and stays canary-free (ADDENDUM-07)', (tester) async {
+    final app = await pumpApp(tester)
+      ..tts.autoEmitPlaybackEvents = false; // engine reports nothing
+    await typeCanary(tester);
+
+    // No start event ever: the first tap's transaction stays open — until
+    // the second tap supersedes it.
+    await tester.tap(find.text(en.speak));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(en.speak));
+    await tester.pumpAndSettle();
+
+    // Now playback begins — for the newest utterance only.
+    await app.tts.emitStart();
+    await tester.pump();
+
+    final outcomes = app.telemetry.recordedTransactions
+        .where((t) => t.scope == 'tts/speak')
+        .map((t) => t.tags['speak_outcome'])
+        .toList();
+    expect(outcomes, ['superseded', 'spoken']);
+    expect(allPayloads(app.telemetry).toLowerCase(), isNot(contains(canary)));
   });
 }

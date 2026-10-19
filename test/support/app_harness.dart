@@ -1,3 +1,5 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_test/flutter_test.dart';
@@ -32,7 +34,7 @@ class TestApp {
 
   /// The app's telemetry — disabled (no DSN is ever compiled into tests),
   /// so its sink is the only observable. Canary suites assert against it
-  /// (ADDENDUM-06).
+  /// (ADDENDUM-06; transactions since ADDENDUM-07).
   final TelemetryService telemetry;
 }
 
@@ -53,6 +55,19 @@ class FakeTts {
   /// (ADDENDUM-06 canary tests embed a canary here).
   String? speakErrorMessage;
 
+  /// When set, `awaitSpeakCompletion` (the first bind call) throws with
+  /// this message — drives the init-failure path end-to-end: the service
+  /// degrades to `unavailable` and tts/ready finishes accordingly
+  /// (ADDENDUM-07).
+  String? initErrorMessage;
+
+  /// Whether a successful `speak` raises the platform's playback lifecycle
+  /// by itself (onStart, then onDone) a beat after the utterance is
+  /// enqueued — like a real engine. Disable to model an engine whose start
+  /// callback is late or missing (the ADDENDUM-07 timeout/supersede
+  /// paths), then drive events with [emitEvent].
+  bool autoEmitPlaybackEvents = true;
+
   List<String> get spokenTexts => [
         for (final call in calls)
           if (call.method == 'speak')
@@ -71,14 +86,41 @@ class FakeTts {
           return true;
         case 'getVoices':
           return voices;
+        case 'awaitSpeakCompletion':
+          if (initErrorMessage != null) throw Exception(initErrorMessage);
+          return 1;
         case 'speak':
           if (speakErrorMessage != null) throw Exception(speakErrorMessage);
+          if (autoEmitPlaybackEvents) {
+            // Platform→Dart events land only after the invoke completes —
+            // schedule them a beat out like the native side would.
+            unawaited(Future(() async {
+              await emitEvent('speak.onStart');
+              await emitEvent('speak.onDone');
+            }));
+          }
           return 1;
         default:
           return 1;
       }
     });
   }
+
+  /// Delivers a platform→Dart playback event through the channel, exactly
+  /// as the native plugin does: the message lands in flutter_tts's
+  /// registered method-call handler, which fans it out to the
+  /// start/completion/… callbacks. ADDENDUM-07: `emitStart()` is what
+  /// finishes an open tts/speak transaction with `spoken`.
+  Future<void> emitEvent(String method, [Object? arguments]) {
+    final data = const StandardMethodCodec()
+        .encodeMethodCall(MethodCall(method, arguments));
+    return TestDefaultBinaryMessengerBinding
+        .instance.defaultBinaryMessenger
+        .handlePlatformMessage('flutter_tts', data, (_) {});
+  }
+
+  /// The platform's "playback began" event for the newest utterance.
+  Future<void> emitStart() => emitEvent('speak.onStart');
 }
 
 /// Boots the real app root on a landscape-tablet viewport, storage seeded
@@ -91,13 +133,16 @@ Future<TestApp> pumpApp(
   Map<String, Object> prefs = const {},
   Size screen = const Size(1280, 800),
   Locale? deviceLocale,
+  String? ttsInitErrorMessage,
 }) async {
   tester.view.physicalSize = screen;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
   SharedPreferences.setMockInitialValues(prefs);
-  final tts = FakeTts()..install();
+  final tts = FakeTts()
+    ..initErrorMessage = ttsInitErrorMessage
+    ..install();
 
   // Mirrors main.dart (ADDENDUM-06): one disabled TelemetryService per app,
   // wired exactly like main() — injected into the instrumented services,
@@ -105,9 +150,24 @@ Future<TestApp> pumpApp(
   // breadcrumb after language.load. Exposed on TestApp for assertions.
   final telemetry = TelemetryService();
 
+  // Mirrors main.dart (ADDENDUM-07): the tts/ready transaction starts before
+  // storage so the measurement covers the child's whole wait, and a
+  // one-shot listener finishes it when the status first leaves
+  // `initializing`.
+  final readyTx = telemetry.startTransaction('tts/ready');
+
   final storage = StorageService();
   await storage.init();
   final speech = SpeechService(telemetry: telemetry);
+
+  void readyListener() {
+    if (speech.status == SpeechStatus.initializing) return;
+    speech.removeListener(readyListener);
+    readyTx.finish(tags: {'tts_status': speech.status.name});
+  }
+
+  speech.addListener(readyListener);
+
   await speech.init();
   final settings = SettingsController(storage)..load();
   final phrases = PhrasesController(storage, telemetry: telemetry)..load();
