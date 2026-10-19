@@ -57,7 +57,139 @@ class CapturedBreadcrumb {
   final Map<String, Object?> data;
 }
 
-/// Error telemetry for HandySpeak (ADDENDUM-06, ADR-0004).
+/// The sanitised shape of a finished timing transaction, as recorded in the
+/// sink (ADDENDUM-07). Content-free by construction: the scope and every
+/// child name are fixed literals, tags are allowlist-filtered — never child
+/// text. [rejected] marks a transaction whose scope was not allowlisted: it
+/// was never measured, and the rejection is recorded so a typo'd scope
+/// fails a canary test rather than passing silently.
+@immutable
+class CapturedTransaction {
+  const CapturedTransaction({
+    required this.scope,
+    this.tags = const {},
+    this.childNames = const [],
+    this.rejected = false,
+  });
+
+  final String scope;
+
+  final Map<String, String> tags;
+
+  final List<String> childNames;
+
+  final bool rejected;
+}
+
+/// A child span of a [TelemetryTransaction] (ADDENDUM-07). Carries no state
+/// worth asserting on — its name was a fixed literal recorded by
+/// [TelemetryTransaction.child] — so the handle only wraps the SDK span in
+/// enabled mode. Finishing twice is a no-op (so is everything after the
+/// parent transaction finished).
+class TelemetrySpan {
+  TelemetrySpan.noop() : _sentry = null;
+  TelemetrySpan._(this._sentry);
+
+  /// The SDK span in enabled mode; `null` in disabled mode.
+  final ISentrySpan? _sentry;
+
+  bool _finished = false;
+
+  /// Marks the span ended. Idempotent.
+  void finish() {
+    if (_finished) return;
+    _finished = true;
+    final sentry = _sentry;
+    if (sentry != null) unawaited(sentry.finish());
+  }
+}
+
+/// A manual timing transaction (ADDENDUM-07). Cheap to hold and cheap to
+/// drop: unknown scopes yield a born-finished no-op (see
+/// [TelemetryService.startTransaction]), and in disabled mode the only
+/// effect of a lifetime is one sink record written at [finish].
+///
+/// The privacy contract is the same as the error pipeline's, enforced one
+/// stage earlier because `beforeSend` never runs on transactions: scopes
+/// and child names are fixed literals (never free text), tags are filtered
+/// at creation, at every [setTag], and at [finish].
+class TelemetryTransaction {
+  TelemetryTransaction._(this._telemetry, this.scope)
+      : _tags = <String, String>{},
+        _childNames = <String>[];
+
+  TelemetryTransaction._rejected(this.scope)
+      : _telemetry = null,
+        _tags = const {},
+        _childNames = const [],
+        _finished = true;
+
+  final TelemetryService? _telemetry;
+
+  /// Fixed scope string, e.g. `tts/speak` — never free text.
+  final String scope;
+
+  /// Post-filter tags accumulated across creation, [setTag] and [finish].
+  final Map<String, String> _tags;
+
+  /// Fixed-literal child names, in start order.
+  final List<String> _childNames;
+
+  /// The SDK transaction in enabled mode; `null` in disabled mode.
+  ISentrySpan? _sentry;
+
+  bool _finished = false;
+
+  /// Whether [finish] has run (or the handle was born rejected). Callers use
+  /// this to guard double-finishes from racing paths.
+  bool get isFinished => _finished;
+
+  /// Starts a child span with a fixed-literal [name] (e.g. `stop`,
+  /// `submit`). After the transaction finished this is a no-op handle.
+  TelemetrySpan child(String name) {
+    if (_finished) return TelemetrySpan.noop();
+    _childNames.add(name);
+    return TelemetrySpan._(_sentry?.startChild(name));
+  }
+
+  /// Records [key]:[value] on the transaction, allowlist-filtered.
+  void setTag(String key, String value) {
+    if (_finished) return;
+    final telemetry = _telemetry;
+    if (telemetry == null) return;
+    _tags.addAll(telemetry._filterTransactionTags({key: value}));
+  }
+
+  /// Ends the transaction, merging (filtered) [tags] into the record.
+  /// Idempotent — the SDK would throw on a double finish; the wrapper
+  /// swallows it instead.
+  void finish({Map<String, String> tags = const {}}) {
+    if (_finished) return;
+    _finished = true;
+    final telemetry = _telemetry;
+    if (telemetry != null) {
+      _tags.addAll(telemetry._filterTransactionTags(tags));
+      telemetry._recordTransaction(CapturedTransaction(
+        scope: scope,
+        tags: Map<String, String>.of(_tags),
+        childNames: List<String>.of(_childNames),
+      ));
+    }
+    final sentry = _sentry;
+    if (sentry != null) {
+      try {
+        unawaited(sentry.finish());
+      } catch (e) {
+        if (kDebugMode) debugPrint('telemetry: finish transaction failed: $e');
+      }
+    }
+  }
+}
+
+/// Error telemetry for HandySpeak (ADDENDUM-06, ADR-0004); timing
+/// transactions since ADDENDUM-07 (same posture, one pipeline difference:
+/// `beforeSend` never runs on transactions, so [startTransaction] filters
+/// at creation time instead).
 ///
 /// Two modes, decided at compile time by [enabled] (a non-empty
 /// `SENTRY_DSN` dart-define):
@@ -117,6 +249,25 @@ class TelemetryService {
     'app_start',
     'tts_status',
     'tts_language',
+  };
+
+  /// Scopes a timing transaction may be started under (ADDENDUM-07). A
+  /// *separate* const from [_scopeAllowlist]: different pipeline, different
+  /// failure mode — `beforeSend` never runs on transactions, so an unknown
+  /// scope must be rejected here, at creation time (see [startTransaction]).
+  @visibleForTesting
+  static const Set<String> transactionScopeAllowlist = {
+    'tts/speak',
+    'tts/ready',
+  };
+
+  /// Tag keys a transaction may carry: the event [tagKeyAllowlist] plus
+  /// `speak_outcome` (fixed vocabulary: spoken / error / superseded /
+  /// stopped / timeout — never child text).
+  @visibleForTesting
+  static const Set<String> transactionTagKeyAllowlist = {
+    ...tagKeyAllowlist,
+    'speak_outcome',
   };
 
   /// Scopes whose raw exception message must never ship — the exception
@@ -237,6 +388,15 @@ class TelemetryService {
             entry.key: redact(entry.value),
       };
 
+  /// Transaction twin of [_filterRedacted]: the extended key allowlist plus
+  /// the same value redaction — the seam owns filtering end-to-end because
+  /// `beforeSend` does not run on the transaction pipeline.
+  Map<String, String> _filterTransactionTags(Map<String, String> raw) => {
+        for (final entry in raw.entries)
+          if (transactionTagKeyAllowlist.contains(entry.key))
+            entry.key: redact(entry.value),
+      };
+
   Map<String, Object?> _filterRedactedExtras(Map<String, Object?> raw) => {
         for (final entry in raw.entries)
           if (tagKeyAllowlist.contains(entry.key))
@@ -248,6 +408,7 @@ class TelemetryService {
 
   final List<CapturedError> _errorSink = [];
   final List<CapturedBreadcrumb> _breadcrumbSink = [];
+  final List<CapturedTransaction> _transactionSink = [];
 
   @visibleForTesting
   List<CapturedError> get capturedErrors => List.unmodifiable(_errorSink);
@@ -255,6 +416,10 @@ class TelemetryService {
   @visibleForTesting
   List<CapturedBreadcrumb> get recordedBreadcrumbs =>
       List.unmodifiable(_breadcrumbSink);
+
+  @visibleForTesting
+  List<CapturedTransaction> get recordedTransactions =>
+      List.unmodifiable(_transactionSink);
 
   // ---- Public API ----
 
@@ -329,6 +494,46 @@ class TelemetryService {
           entry.key: entry.value?.toString() ?? '',
       },
     )));
+  }
+
+  /// Starts a manual timing transaction under a fixed, allowlisted [scope]
+  /// (ADDENDUM-07). Two hard differences from the error pipeline:
+  ///
+  /// * **`beforeSend` does not run on transactions**, so the seam filters
+  ///   tags here, at every `setTag`, and at `finish` — nothing downstream
+  ///   backstops it.
+  /// * An unknown scope yields a **born-finished no-op** handle whose
+  ///   rejection is recorded in the sink — a future typo'd scope fails a
+  ///   canary test, not silently.
+  ///
+  /// In disabled mode the handle's only effect is the sink record written
+  /// at finish; callers never branch on [enabled].
+  TelemetryTransaction startTransaction(String scope,
+      {Map<String, String> tags = const {}}) {
+    if (!transactionScopeAllowlist.contains(scope)) {
+      _recordTransaction(CapturedTransaction(scope: scope, rejected: true));
+      return TelemetryTransaction._rejected(scope);
+    }
+    final transaction = TelemetryTransaction._(this, scope)
+      .._tags.addAll(_filterTransactionTags(tags));
+    if (enabled) {
+      try {
+        final sentry = Sentry.startTransaction(scope, 'app');
+        transaction._sentry = sentry;
+        for (final entry in transaction._tags.entries) {
+          sentry.setTag(entry.key, entry.value);
+        }
+      } catch (e) {
+        // Telemetry must never take the app down with it.
+        if (kDebugMode) debugPrint('telemetry: startTransaction failed: $e');
+      }
+    }
+    return transaction;
+  }
+
+  void _recordTransaction(CapturedTransaction captured) {
+    _transactionSink.add(captured);
+    if (_transactionSink.length > _sinkCapacity) _transactionSink.removeAt(0);
   }
 
   // ---- Error hooks (both modes) ----

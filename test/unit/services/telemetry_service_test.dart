@@ -182,6 +182,84 @@ void main() {
       });
     });
 
+    group('transactions (ADDENDUM-07)', () {
+      test('unknown scope → born-finished no-op; rejection hits the sink', () {
+        final telemetry = TelemetryService();
+        final tx = telemetry.startTransaction('tts/typo');
+
+        expect(tx.isFinished, isTrue);
+        // A born-finished handle must tolerate any late caller mistake.
+        tx.setTag('ui_locale', 'en');
+        tx.child('stop');
+        tx.finish(tags: const {'tts_status': 'ready'});
+
+        expect(telemetry.recordedTransactions, hasLength(1));
+        final captured = telemetry.recordedTransactions.single;
+        expect(captured.scope, 'tts/typo');
+        expect(captured.rejected, isTrue);
+        expect(captured.tags, isEmpty);
+        expect(captured.childNames, isEmpty);
+      });
+
+      test('tags are filtered at creation, at setTag and at finish; child '
+          'names record in order', () {
+        final telemetry = TelemetryService();
+        final tx = telemetry.startTransaction('tts/speak', tags: const {
+          'ui_locale': 'cs-CZ',
+          'raw_length': '12',
+          'evil': 'nope',
+        });
+        expect(tx.isFinished, isFalse);
+
+        tx.setTag('speak_outcome', 'spoken');
+        tx.setTag('another_evil', 'nope');
+        tx.child('stop');
+        tx.child('submit');
+        tx.finish(tags: const {'also_evil': 'nope'});
+
+        expect(telemetry.recordedTransactions, hasLength(1));
+        final captured = telemetry.recordedTransactions.single;
+        expect(captured.rejected, isFalse);
+        expect(captured.scope, 'tts/speak');
+        expect(captured.tags.keys, {'ui_locale', 'raw_length', 'speak_outcome'});
+        expect(captured.tags['speak_outcome'], 'spoken');
+        expect(captured.childNames, ['stop', 'submit']);
+      });
+
+      test('tag values are redacted like error tags (canary in a value)', () {
+        final telemetry = TelemetryService()..registerSecret('CANARYQQ7X');
+        final tx = telemetry.startTransaction('tts/speak');
+        tx.setTag('ui_locale', 'x-CANARYQQ7X');
+        tx.finish();
+
+        final serialized =
+            '${telemetry.recordedTransactions.single.scope} '
+            '${telemetry.recordedTransactions.single.tags} '
+            '${telemetry.recordedTransactions.single.childNames}';
+        expect(serialized.contains('CANARYQQ7X'), isFalse);
+        expect(serialized, contains('[redacted]'));
+      });
+
+      test('double finish is ignored — the first outcome stands', () {
+        final telemetry = TelemetryService();
+        final tx = telemetry.startTransaction('tts/ready');
+        tx.finish(tags: const {'tts_status': 'ready'});
+        tx.finish(tags: const {'tts_status': 'unavailable'});
+
+        expect(telemetry.recordedTransactions, hasLength(1));
+        expect(telemetry.recordedTransactions.single.tags['tts_status'],
+            'ready');
+      });
+
+      test('sink keeps only the last 20 transactions', () {
+        final telemetry = TelemetryService();
+        for (var i = 0; i < 25; i++) {
+          telemetry.startTransaction('tts/ready').finish();
+        }
+        expect(telemetry.recordedTransactions, hasLength(20));
+      });
+    });
+
     test('sink keeps only the last 20 entries', () async {
       final telemetry = TelemetryService();
       for (var i = 0; i < 25; i++) {
