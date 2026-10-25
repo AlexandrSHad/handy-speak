@@ -16,8 +16,13 @@ String? letterSound(String char, AppLanguage lang) {
 // - Vowels: identity spelling where the letter name already is the sound
 //   (cs/uk true by orthography; en uses schwa-ish approximations — weakest
 //   drafts, logoped to vet).
-// - Continuants (fricatives, nasals, liquids): doubled spelling sustains
-//   the sound ("sss", "mm").
+// - Continuants (fricatives, nasals, liquids): the reference engine
+//   letterizes vowel-less spellings (ear pass: "sss" came out "es es
+//   es"), so drafts use a sustained onset cluster + schwa ("sssuh") —
+//   engines blend onset consonants, keeping the sustain. 'mmm' stays a
+//   bare doubling: a dictionary interjection the engine speaks as the
+//   sound. If this engine letterizes onsets too, fall back to plain
+//   syllables ("suh").
 // - Stops and affricates: cannot be isolated without a trailing vowel —
 //   English phonics convention uses schwa ("buh"); Czech/Ukrainian start
 //   as identity drafts and get ear-pass alternatives only if the engine
@@ -28,11 +33,12 @@ String? letterSound(String char, AppLanguage lang) {
 // sounds" explicit per language, instead of implicit in what's missing.
 const _kLetterSounds = <AppLanguage, Map<String, String>>{
   AppLanguage.en: {
-    'a': 'ah', 'b': 'buh', 'c': 'kuh', 'd': 'duh', 'e': 'eh', 'f': 'fff',
-    'g': 'guh', 'h': 'huh', 'i': 'ih', 'j': 'juh', 'k': 'kuh', 'l': 'lll',
-    'm': 'mmm', 'n': 'nnn', 'o': 'awe', 'p': 'puh', 'q': 'kwuh', 'r': 'rrr',
-    's': 'sss', 't': 'tuh', 'u': 'uh', 'v': 'vvv', 'w': 'wuh', 'x': 'ks',
-    'y': 'yuh', 'z': 'zzz',
+    'a': 'ah', 'b': 'buh', 'c': 'kuh', 'd': 'duh', 'e': 'eh',
+    'f': 'fffuh', 'g': 'guh', 'h': 'huh', 'i': 'ih', 'j': 'juh',
+    'k': 'kuh', 'l': 'llluh', 'm': 'mmm', 'n': 'nnnuh', 'o': 'awe',
+    'p': 'puh', 'q': 'kwuh', 'r': 'rrruh', 's': 'sssuh', 't': 'tuh',
+    'u': 'uh', 'v': 'vvvuh', 'w': 'wuh', 'x': 'ksuh', 'y': 'yuh',
+    'z': 'zzzuh',
   },
   AppLanguage.cs: {
     // Vowels and vowel-length diacritics: identity — the Czech letter name

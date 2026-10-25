@@ -71,7 +71,7 @@ void main() {
 
     test('spot checks: draft spellings flow through per language', () {
       expect(letterSound('b', AppLanguage.en), 'buh');
-      expect(letterSound('s', AppLanguage.en), 'sss');
+      expect(letterSound('s', AppLanguage.en), 'sssuh');
       expect(letterSound('ř', AppLanguage.cs), 'ř');
       expect(letterSound('ů', AppLanguage.cs), 'ů');
       expect(letterSound('щ', AppLanguage.uk), 'шч');
