@@ -163,11 +163,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSpeechFeedback => 'Speech feedback';
 
   @override
-  String get settingsSpeakLettersName => 'Read letters while typing';
+  String get settingsSpeakLettersName => 'Say letter sounds while typing';
 
   @override
   String get settingsSpeakLettersDesc =>
-      'Each letter and number is spoken as it is typed.';
+      'Each letter is spoken as its sound — b says „buh“. Numbers and math signs keep their names.';
 
   @override
   String get settingsSpeakWordsName => 'Read finished words';

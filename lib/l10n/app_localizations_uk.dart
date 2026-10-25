@@ -166,11 +166,11 @@ class AppLocalizationsUk extends AppLocalizations {
   String get settingsSpeechFeedback => 'Мовний зворотний зв\'язок';
 
   @override
-  String get settingsSpeakLettersName => 'Читати літери під час письма';
+  String get settingsSpeakLettersName => 'Вимовляти звуки літер під час письма';
 
   @override
   String get settingsSpeakLettersDesc =>
-      'Кожна літера та цифра озвучується одразу після введення.';
+      'Кожна літера озвучується як звук (б — як «б»); цифри та знаки вимовляються своїми назвами.';
 
   @override
   String get settingsSpeakWordsName => 'Читати завершені слова';

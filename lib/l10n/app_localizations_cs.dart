@@ -164,11 +164,11 @@ class AppLocalizationsCs extends AppLocalizations {
   String get settingsSpeechFeedback => 'Hlasová zpětná vazba';
 
   @override
-  String get settingsSpeakLettersName => 'Číst písmena při psaní';
+  String get settingsSpeakLettersName => 'Říkat hlásky při psaní';
 
   @override
   String get settingsSpeakLettersDesc =>
-      'Každé písmeno a číslo se přečte hned, jak je napsáno.';
+      'Každé písmeno zazní jako hláska (b jako „b“); čísla a znaménka se ozývají svými názvy.';
 
   @override
   String get settingsSpeakWordsName => 'Číst dokončená slova';

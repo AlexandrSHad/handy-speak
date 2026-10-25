@@ -367,13 +367,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsSpeakLettersName.
   ///
   /// In en, this message translates to:
-  /// **'Read letters while typing'**
+  /// **'Say letter sounds while typing'**
   String get settingsSpeakLettersName;
 
   /// No description provided for @settingsSpeakLettersDesc.
   ///
   /// In en, this message translates to:
-  /// **'Each letter and number is spoken as it is typed.'**
+  /// **'Each letter is spoken as its sound — b says „buh“. Numbers and math signs keep their names.'**
   String get settingsSpeakLettersDesc;
 
   /// No description provided for @settingsSpeakWordsName.
