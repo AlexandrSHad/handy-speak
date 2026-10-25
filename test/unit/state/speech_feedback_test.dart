@@ -180,14 +180,26 @@ void main() {
       expect(spoken(), isEmpty);
     });
 
-    test('letters: letters and digits echo; terminator keys never do', () async {
+    test('letters: letters echo their sounds, digits their names', () async {
       settings.setSpeakLetters(true);
       composer
         ..addChar('a')
         ..addChar('1')
         ..addChar(' ');
       await pumpEventQueue();
-      expect(spoken(), ['a', '1']);
+      expect(spoken(), ['ah', '1']);
+    });
+
+    test('letters: the sound comes from the active language table', () async {
+      settings.setSpeakLetters(true);
+      composer.addChar('b');
+      await pumpEventQueue();
+      expect(spoken(), ['buh']); // en draft
+
+      language.setLanguage(AppLanguage.cs);
+      composer.addChar('b');
+      await pumpEventQueue();
+      expect(spoken(), ['buh', 'b']); // cs identity draft
     });
 
     test('words: a terminator speaks the finished word, not the terminator',
@@ -224,7 +236,7 @@ void main() {
         ..addChar('h')
         ..addChar(' ');
       await pumpEventQueue();
-      expect(spoken(), ['a', 'h', 'ah']);
+      expect(spoken(), ['ah', 'huh', 'ah']);
     });
 
     test('symbol tap speech is gated by its own toggle, not words', () async {

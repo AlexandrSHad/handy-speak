@@ -33,13 +33,13 @@ void main() {
 
     await tapKey(tester, 'a');
     await tapKey(tester, '1');
-    expect(app.tts.spokenTexts, ['a', '1']);
+    expect(app.tts.spokenTexts, ['ah', '1']);
 
     // Space and backspace never echo.
     await tapKey(tester, en.keySpace);
     await tester.tap(find.byIcon(Icons.backspace_outlined));
     await tester.pumpAndSettle();
-    expect(app.tts.spokenTexts, ['a', '1']);
+    expect(app.tts.spokenTexts, ['ah', '1']);
   });
 
   testWidgets('speak_words: space and punctuation keys speak the finished word',
@@ -65,7 +65,7 @@ void main() {
     await tapKey(tester, 'h');
     await tapKey(tester, en.keySpace);
 
-    expect(app.tts.spokenTexts, ['a', 'h', 'ah']);
+    expect(app.tts.spokenTexts, ['ah', 'huh', 'ah']);
   });
 
   testWidgets('speak_symbols: a pictogram tap speaks its word', (tester) async {
@@ -131,7 +131,7 @@ void main() {
     await tapKey(tester, 'a');
     await tapKey(tester, 'h');
     await tapKey(tester, en.keySpace);
-    expect(app.tts.spokenTexts, ['a', 'h', 'ah']);
+    expect(app.tts.spokenTexts, ['ah', 'huh', 'ah']);
   });
 
   testWidgets('the four speech rows sit in the Accessibility pane',

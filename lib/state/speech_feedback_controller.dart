@@ -1,3 +1,4 @@
+import '../core/letter_sounds.dart';
 import '../core/math_speak.dart';
 import '../services/speech_service.dart';
 import 'composer_controller.dart';
@@ -7,8 +8,9 @@ import 'settings_controller.dart';
 /// Typing speech feedback (logoped request): listens to [ComposerController]
 /// input events and speaks them per the parent's Accessibility toggles —
 ///   - **Read letters while typing** ([SettingsController.speakLetters]):
-///     each letter/digit key (keyboard and math digits) echoes its name in the
-///     active TTS language;
+///     each keyboard letter echoes its **sound** in the active TTS language
+///     (ADDENDUM-08 `letterSound` — "buh", "sss"); digits and math keys keep
+///     their names/words;
 ///   - **Read finished words** ([SettingsController.speakWords]): a keyboard
 ///     word is spoken when finished with the space or a punctuation key; in
 ///     math, an operator press speaks the just-completed number;
@@ -51,7 +53,9 @@ class SpeechFeedbackController {
           if (_settings.speakWords) _say(completedWord);
         } else if (_settings.speakLetters &&
             !kWordTerminators.contains(char)) {
-          _say(char);
+          // Letter keys say their sound (ADDENDUM-08); digits on the en/uk
+          // number rows, ʼ/ь and any table miss fall through to the raw char.
+          _say(letterSound(char, _language.language) ?? char);
         }
       case WordAppended(:final word):
         if (_settings.speakSymbols) _say(word);
