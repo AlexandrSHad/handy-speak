@@ -53,7 +53,7 @@ lib/
   l10n/        ARB sources (app_en.arb = template, app_cs.arb) + generated app_localizations*.dart
   main.dart    entry point; orientation lock, DI wiring
 test/               headless widget/unit tests
-integration_test/   device integration suites
+integration_test/   device smoke suite (the only on-device suite)
 planning/           IMPLEMENTATION_PLAN.md + per-feature ADDENDUM plans (design source of truth)
 docs/               design notes (e.g. forgiving-taps.md)
 handoff/            original handoff archive (_extracted/ is gitignored)
@@ -65,7 +65,7 @@ handoff/            original handoff archive (_extracted/ is gitignored)
 puro flutter run                       # run on connected device/emulator
 puro flutter analyze                   # static analysis (fails the build on lint errors)
 puro flutter test                      # Dart VM, no device — every test/*_test.dart (fast agent self-check)
-puro flutter test integration_test/    # real integration tests (Android only, run manually with -d <device>)
+puro flutter test integration_test/    # device smoke (Android only, run manually with -d <device>)
 dart run flutter_launcher_icons   # regenerate app icons
 dart run flutter_native_splash:create   # regenerate native splash screens
 puro flutter run --dart-define-from-file=dart_defines.json   # telemetry on (copy dart_defines.example.json, fill DSN)
@@ -76,11 +76,11 @@ Run every command through **Puro** (`puro flutter …` / `puro dart …`); `puro
 is on PATH and auto-selects the `handyspeak` env. The bare `flutter` is not on
 PATH (per-env isolation).
 
-Each ADDENDUM suite has a headless `test/<name>_test.dart` and an on-device
-`integration_test/<name>_test.dart` sharing one `run…Suite()`. The `test/`
-entries let the agent quickly verify logic on the Dart VM; the
-`integration_test/` entries are slower and run manually against an Android
-device (web unsupported, no desktop folders).
+Feature tests are headless, in feature-slug files under `test/unit/` and
+`test/behavior/` (see the `handyspeak-suites` skill). The only
+`integration_test/` consumer is the device smoke — a manual, per-release
+Android run (`puro flutter test integration_test/device_smoke_test.dart
+-d <device>`); per-feature integration pairs are retired.
 
 ## Conventions
 
@@ -97,11 +97,12 @@ device (web unsupported, no desktop folders).
   `kTouchSlop`, which silently drops input for this audience. Full rationale
   and migration list in `docs/forgiving-taps.md`.
 - **Per-feature tracking:** substantial features get an ADDENDUM plan in
-  `planning/` paired with an integration-test suite in `integration_test/`
-  (see the `keytap` and `addendum01` pairs). Follow that shape for new work
-  via the `handyspeak-suites` skill (`.claude/skills/` — one skill home
-  shared by both pi and Claude Code) when creating or updating a suite
-  pair.
+  `planning/` paired with feature tests in `test/unit/` + `test/behavior/`.
+  Follow that shape for new work via the `handyspeak-suites` skill
+  (`.claude/skills/` — one skill home shared by both pi and Claude Code)
+  when creating or updating a suite. The device smoke under
+  `integration_test/` is the only on-device suite and stays a single
+  per-release pair.
 - **Inputs:** the card-input idiom (surface2 fill, 16 px radius, divider
   border → primary on focus) lives in `AppTheme`'s `InputDecorationTheme`
   — never hand-roll `InputDecoration` chrome per field. Dropdowns follow

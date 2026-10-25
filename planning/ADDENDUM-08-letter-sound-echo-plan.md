@@ -98,7 +98,9 @@ speaking → `lib/core/`, not `lib/data/`). Shape:
 /// device, validated by the logoped; the table is the tuning surface.
 String? letterSound(String char, AppLanguage lang) { … }
 
-const kLetterSounds = <AppLanguage, Map<String, String>>{ … };
+// Private like `_kMathSpeak` — the public API is `letterSound()` only;
+// tests (incl. layout-derived coverage) go through the function.
+const _kLetterSounds = <AppLanguage, Map<String, String>>{ … };
 ```
 
 Lookup lowercases the char first.
@@ -177,6 +179,14 @@ In the `CharTyped` branch (the `speakLetters` echo path only):
 Digits on the en/uk number rows, `ʼ`, `ь`, and any miss fall through to
 the raw char. All other branches untouched.
 
+Two bookkeeping items land in this same commit:
+
+- Existing name-echo assertions flip to spellings (tap `a` → `'ah'` in
+  en) in `test/unit/state/speech_feedback_test.dart` and
+  `test/behavior/speech_feedback_test.dart`.
+- The controller class dartdoc still says keys "echo its name" — update
+  it to sounds.
+
 ### 3. Strings — `lib/l10n/app_en.arb`, `app_cs.arb`, `app_uk.arb`
 
 Same keys, new values (then `puro flutter gen-l10n`; generated files are
@@ -193,17 +203,33 @@ generated getters.
 
 ### 4. Suite — `handyspeak-suites` convention
 
-Headless `test/letter_sounds_test.dart` + the device pair under
-`integration_test/`, sharing one `run…Suite()` (follow the skill when
-writing them).
+Feature tests in the current unit/behavior shape (the per-feature
+`integration_test/` pair convention is retired — the device smoke is the
+only `integration_test/` consumer):
+
+- Table tests → new `test/unit/core/letter_sounds_test.dart` (sibling of
+  `math_speak_test.dart`).
+- Controller policy tests → extend
+  `test/unit/state/speech_feedback_test.dart`.
+- Real-keyboard wiring tests → extend
+  `test/behavior/speech_feedback_test.dart`.
+
+No new `integration_test/` pair, no device-smoke change: a device
+assertion could only re-check the string FakeTts already proves; engine
+pronunciation is the ear pass's job.
 
 ## Commit sequence
 
-1. `lib/core/letter_sounds.dart` + unit tests — data only, nothing calls
-   it yet; `flutter analyze` + `flutter test` green.
-2. Controller wiring + tests — the behavior change lands.
-3. ARB strings + `gen-l10n` — copy matches behavior.
-4. Integration pair (device, manual `-d <device>` run).
+1. `lib/core/letter_sounds.dart` + table unit tests
+   (`test/unit/core/letter_sounds_test.dart`) — data only, nothing calls
+   it yet; `puro flutter analyze` + `puro flutter test` green.
+2. Controller wiring + tests — the behavior change lands (extend the two
+   `speech_feedback` suites; flip their name-echo assertions to
+   spellings; update the controller dartdoc — see step 2).
+3. ARB strings + `puro flutter gen-l10n` — copy matches behavior.
+
+Then the manual ear pass on the reference device — the acceptance step
+for the tables (see Verification). No automated device suite.
 
 ## Risks
 
@@ -226,21 +252,24 @@ writing them).
 
 ## Verification
 
-**Unit tests (headless, `test/letter_sounds_test.dart`):**
-- Coverage, **derived from `kKeyboardLayouts`**: every letter key of every
-  language's layout is either in that language's table or in the
-  explicitly-unmapped set (`ʼ`, `ь`) — no accidental gaps.
-- No digit key in any table (pins the mixed-echo decision).
-- Case normalization: `B` → same entry as `b`.
-- Fallback: `letterSound('5', _)`, `letterSound('ʼ', uk)`, unknown chars
-  → null.
-- Controller: letter key → `_say(sound)`; digit key → `_say('5')`;
-  `speakLetters` off → nothing; word/symbol/phrase paths unchanged
-  (rate never passed — `speak(…, feedback: true)` only).
+**Unit tests (headless):**
+- Table suite (`test/unit/core/letter_sounds_test.dart`):
+  - Coverage, **derived from `kKeyboardLayouts`**: every letter key of
+    every language's layout maps non-null via `letterSound` except the
+    explicitly-unmapped set (`ʼ`, `ь`) — no accidental gaps.
+  - No digit key in any table (pins the mixed-echo decision).
+  - Case normalization: `B` → same entry as `b`.
+  - Fallback: `letterSound('5', _)`, `letterSound('ʼ', uk)`, unknown
+    chars → null.
+- Controller (`test/unit/state/speech_feedback_test.dart` + wiring in
+  `test/behavior/speech_feedback_test.dart`): letter key →
+  `_say(sound)`; digit key → `_say('5')`; `speakLetters` off → nothing;
+  word/symbol/phrase paths unchanged (rate never passed —
+  `speak(…, feedback: true)` only).
 
-**Integration tests (device):** mirror the headless assertions through
-the real keyboard (tap `b` → utterance is the table's spelling; tap `5`
-→ digit name; toggle off → silent), via the shared suite.
+**Device: no automated suite.** A device assertion could only re-check
+the string FakeTts already proves; engine pronunciation is the ear
+pass's job (below).
 
 **Manual ear pass (the acceptance step for the tables):** on the
 reference device (`puro flutter run`), listen to every letter of every
@@ -274,5 +303,6 @@ fast, open the Deferred item.
 - `lib/state/speech_feedback_controller.dart`
 - `lib/l10n/app_en.arb`, `app_cs.arb`, `app_uk.arb` (+ generated
   `app_localizations*.dart`)
-- `test/letter_sounds_test.dart` (new)
-- `integration_test/letter_sounds_test.dart` (+ suite, new)
+- `test/unit/core/letter_sounds_test.dart` (new)
+- `test/unit/state/speech_feedback_test.dart` (extended)
+- `test/behavior/speech_feedback_test.dart` (extended)
