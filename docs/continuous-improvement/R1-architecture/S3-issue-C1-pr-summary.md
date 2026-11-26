@@ -3,7 +3,7 @@
 - **Issue:** C1 from [S01-architecture-review.md](S01-architecture-review.md) §3.1, as analyzed and amended in [S02-issue-C1.md](S02-issue-C1.md) — the `data ⇄ state` import cycle around `Phrase`.
 - **Branch:** `r1/c1-phrase-model`, off `main`. (S02 §3 sketched worktrees for C2/C3 parallelism; per integrator instruction this one is a plain branch in the main checkout — C1 was explicitly "small enough" for that.)
 - **Date:** 2026-11-26
-- **Gate (the only one — M8/CI is deferred, S02 §2):** `puro flutter analyze` — **No issues found** · `puro flutter test` — **327/327 passed** (was 325; the new layering suite adds 2). Device smoke is untouched by this issue (S02 verified it references no dialog keys; it imports the controller without naming `Phrase`).
+- **Gate (the only one — M8/CI is deferred, S02 §2):** `puro flutter analyze` — **No issues found** · `puro flutter test` — **327/327 passed** (was 325; the new layering suite adds 2). Re-run after the §5 review follow-ups: still no issues, still 327/327. Device smoke is untouched by this issue (S02 verified it references no dialog keys; it imports the controller without naming `Phrase`).
 
 ## 1. What changed
 
@@ -12,7 +12,7 @@
 | `lib/data/phrase.dart` | **new** — `Phrase` (fields, `copyWith`, `toJson`/`fromJson`) moved **verbatim** from `phrases_controller.dart:12-33`, with its `@immutable` annotation (`package:flutter/foundation.dart show immutable` — the model's only framework need). A doc line records why the model lives below the controller. |
 | `lib/data/phrases_data.dart` | `import '../state/phrases_controller.dart'` → `import 'phrase.dart'`. This deletes the codebase's **only** `data → state` edge; the import graph is one-way everywhere now. |
 | `lib/state/phrases_controller.dart` | Model class removed; imports `../data/phrase.dart` (one-way) **and** re-exports it — see §2. Controller logic untouched. |
-| `lib/data/symbol_categories.dart` | `import 'package:flutter/material.dart'` (pulled in only for `Color`) → `import 'dart:ui' show Color`. The L2 sibling fix S01 folded into C1's pass: the data layer no longer drags Material. |
+| `lib/data/symbol_categories.dart` | `import 'package:flutter/material.dart'` (pulled in only for `Color`) → `import 'dart:ui' show Color`. The L2 sibling fix S01 folded into C1's pass. Scope note (PR #13 review): this drops the layer's **only direct Material import** — it does not make the layer framework-free; `phrase.dart` still uses `@immutable` from `flutter/foundation.dart`, and every data file transitively sees `flutter/widgets.dart` through `core/app_language.dart` (`Locale`). `package:meta` would make the model file pure Dart, but `meta` is not a declared dependency, so the claim was softened wherever it lived instead. |
 | `test/unit/data/layering_test.dart` | **new** — the regression guard, see §3. |
 
 No pubspec, l10n/ARB, or generated-file changes. No behavior change: a pure move plus two import swaps.
@@ -33,10 +33,17 @@ The `import` + `export` pair on one URI is the canonical "use and re-export" pat
 
 ## 3. The layering guard
 
-`test/unit/data/layering_test.dart` walks every `lib/data/*.dart` and fails if any **import or export** directive resolves into `lib/state/` — covering both the relative (`../state/…`) and package (`package:handy_speak/state/…`) forms, and both directive kinds (an export of state from data is the same violation). It parses directive URIs only, never free text, so a comment that merely mentions `state/` cannot false-positive; a non-vacuity check (the directory exists and holds Dart files) makes a silently-empty guard fail loudly. It runs on every platform via `puro flutter test` — S02's preference over S01's POSIX-only CI `grep -r "state/" lib/data/`, which isn't guaranteed on this repo's Windows dev machines and false-positives on comments.
+`test/unit/data/layering_test.dart` walks every `lib/data/**/*.dart` — recursively, so a future subdirectory cannot slip past the check — and fails if any **import or export** directive resolves into `lib/state/`: both directive kinds (an export of state from data is the same violation) and both forms, relative (`../state/…`, resolved from the importing file's own directory) and package (`package:handy_speak/state/…`). Directives are parsed as *statements*, not lines (hardened after the PR #13 review): a directive split across lines, a line packing several directives, either quote style, and every URI of a conditional import/export are all covered. It parses directive URIs only, never free text, so a comment that merely mentions `state/` cannot false-positive; a non-vacuity check (the directory exists and holds Dart files) makes a silently-empty guard fail loudly. It runs on every platform via `puro flutter test` — S02's preference over S01's POSIX-only CI `grep -r "state/" lib/data/`, which isn't guaranteed on this repo's Windows dev machines and false-positives on comments.
 
 ## 4. Merge notes (for the integrator, per S02 §5)
 
 1. Merge `r1/c1-phrase-model` into `main`, then re-run `puro flutter analyze` + `puro flutter test` on the combined result.
 2. No overlap with C2 (verified disjoint in S02 §1) — C2 can start or rebase immediately after this lands.
 3. C3 + M5 + M2 (the persistence batch) now have the model's home: their `Phrase` edits (stable id, the `uses` decision) belong in `lib/data/phrase.dart`, absorbed by the first schema-version bump (S02 §2 step 4).
+
+## 5. PR #13 review follow-ups
+
+Two review comments (both nits) were addressed on the branch after the first push:
+
+1. **"Data layer no longer drags Material" was overstated.** Correct: `phrase.dart` still imports `flutter/foundation.dart` for `@immutable`, and every data file transitively sees `flutter/widgets.dart` through `core/app_language.dart` (`Locale`). Fix: the claim was softened to "the layer's only direct *Material* import is gone" everywhere it lived — §1 above, the `symbol_categories.dart` header, the `phrase.dart` doc comment, and this PR's description. The `package:meta` option was considered and declined: `meta` is in the lock file only as a *transitive* dependency, and declaring a new one to remove a single annotation would widen what is otherwise a pure move — the decision is recorded in `phrase.dart`'s doc comment, where a future framework-free pass can find it.
+2. **Layering-guard blind spots.** The guard matched only single-quoted URIs, parsed directives line-at-a-time (so `import` / newline / `'…'` escaped), and listed `lib/data` non-recursively (subdirectories would escape). Fix: statement-level parsing (both quote styles, multi-line directives, several directives per line, every conditional-URI), a recursive walk, and relative URIs resolved from each file's own directory — see §3.

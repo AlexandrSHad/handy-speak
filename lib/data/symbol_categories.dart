@@ -1,6 +1,9 @@
-// `Color` straight from `dart:ui`, not `flutter/material.dart` — the data
-// layer stays decoupled from the framework (R1 review, L2 covered by C1's
-// fix pass).
+// `Color` straight from `dart:ui`, not `flutter/material.dart`: this file no
+// longer drags the whole widget library for one type (R1 review, L2 covered
+// by C1's fix pass). Narrower, not framework-free — `dart:ui` is still
+// Flutter, and the layer keeps framework imports elsewhere: `phrase.dart`
+// needs `@immutable` from `flutter/foundation.dart`, and `app_language.dart`
+// below needs `Locale` from `flutter/widgets.dart` (PR #13 review).
 import 'dart:ui' show Color;
 
 import '../core/app_language.dart';

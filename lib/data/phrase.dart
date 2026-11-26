@@ -6,6 +6,13 @@ import 'package:flutter/foundation.dart' show immutable;
 /// layer: `state/phrases_controller.dart` and the seed data depend on this
 /// file, never the other way around (R1 architecture review, issue C1 —
 /// this move breaks the former `data ⇄ state` import cycle).
+///
+/// `@immutable` still comes from `flutter/foundation.dart` — the model's
+/// only framework need, kept from the pre-move file. Importing
+/// `package:meta` instead would make this file pure Dart, but `meta` is
+/// not a declared dependency (PR #13 review) and adding one widens what is
+/// otherwise a pure move; revisit if the layer ever needs to be
+/// framework-free.
 @immutable
 class Phrase {
   final String text;
