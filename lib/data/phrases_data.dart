@@ -1,5 +1,5 @@
 import '../core/app_language.dart';
-import '../state/phrases_controller.dart';
+import 'phrase.dart';
 
 /// Seed phrase sets — genuinely per-language and independent
 /// (IMPLEMENTATION_PLAN §6.1.4). English from the prototype's
