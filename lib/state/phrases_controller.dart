@@ -4,33 +4,16 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 import '../core/app_language.dart';
+import '../data/phrase.dart';
 import '../data/phrases_data.dart';
 import '../services/storage_service.dart';
 import '../services/telemetry_service.dart';
 
-/// A quick phrase belonging to one language (IMPLEMENTATION_PLAN §6).
-@immutable
-class Phrase {
-  final String text;
-  final bool pinned;
-  final int uses;
-  const Phrase({required this.text, this.pinned = false, this.uses = 0});
-
-  Phrase copyWith({String? text, bool? pinned, int? uses}) => Phrase(
-        text: text ?? this.text,
-        pinned: pinned ?? this.pinned,
-        uses: uses ?? this.uses,
-      );
-
-  Map<String, dynamic> toJson() =>
-      {'text': text, 'pinned': pinned, 'uses': uses};
-
-  factory Phrase.fromJson(Map<String, dynamic> j) => Phrase(
-        text: j['text'] as String,
-        pinned: j['pinned'] as bool? ?? false,
-        uses: j['uses'] as int? ?? 0,
-      );
-}
+// `Phrase` moved to `data/phrase.dart` (R1 C1). Re-exported here so every
+// existing consumer that reads `Phrase` through this controller keeps
+// compiling unchanged; new consumers import `data/phrase.dart` directly and
+// stay decoupled from the controller.
+export '../data/phrase.dart';
 
 /// Per-language phrase lists, seeded and persisted independently
 /// (IMPLEMENTATION_PLAN §6.1.4 / Task 7). Stored under `phrases_en` /

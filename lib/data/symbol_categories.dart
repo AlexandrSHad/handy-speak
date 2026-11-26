@@ -1,4 +1,8 @@
-import 'package:flutter/material.dart';
+// `Color` straight from `dart:ui`, not `flutter/material.dart` — the data
+// layer stays decoupled from the framework (R1 review, L2 covered by C1's
+// fix pass).
+import 'dart:ui' show Color;
+
 import '../core/app_language.dart';
 
 /// A symbol category. Labels are per-language; the hue is decorative
