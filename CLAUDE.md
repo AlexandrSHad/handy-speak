@@ -99,7 +99,8 @@ Android run (`puro flutter test integration_test/device_smoke_test.dart
 - **Per-feature tracking:** substantial features get an ADDENDUM plan in
   `planning/` paired with feature tests in `test/unit/` + `test/behavior/`.
   Follow that shape for new work via the `handyspeak-suites` skill
-  (`.claude/skills/` — one skill home shared by both pi and Claude Code)
+  (`.agents/skills/` — the cross-agent standard skills home, read natively
+  by DSH and pi; the Claude Code `.claude/skills/` bridge is deferred)
   when creating or updating a suite. The device smoke under
   `integration_test/` is the only on-device suite and stays a single
   per-release pair.
@@ -117,3 +118,6 @@ Android run (`puro flutter test integration_test/device_smoke_test.dart
   telemetry compiles in disabled mode. `SENTRY_AUTH_TOKEN`, if ever needed
   for debug-symbol upload, is an env var on the build machine — never a
   define, never committed.
+- **Continuous improvement:** architecture rounds run via the agent team
+  in `.claude/agents/` — conductor, surveyor, cross-examiner, builder,
+  gatekeeper — per the flow in `docs/continuous-improvement/context.md`.

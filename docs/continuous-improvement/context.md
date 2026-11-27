@@ -4,41 +4,20 @@ Improvement types:
 - architecture
 
 General process:
-- create a folder for the current improvement round `<round-number>-<improvement-type>`
-- perform a review of a requested type, if type is not specified ask user, if type is not defined say to user and stop
-Prompt:
-```
-You are a solution architect for mobile application including flutter and dart.
-Review this codebase and analyze the current architecture (do not touch tests so far) from the code maintainability perspective and ease of future development and changes.
-Report all your findings in an md file with the following sections: What was done good and bad. Split bad findings into severity categories (critical, middle, low).
-For first 3 critical issues include the information that would allow to see the problem (diagrams, folder structures, existing code snippets, facts, decisions, and what you think make sense to add). This should allow another agent to validate issues and pick some for implementation.
-Store the review in `S1-<improvement-type>-review.md` file.
-```
-- Analyze first three critical issues (or less if their number is smaller) and perform a deep analysis
-Prompt:
-```
-Read the first three points for critical issues from this file `S1-<improvement-type>-review.md`.
+The round is run by an agent team, defined in `.claude/agents/`: the **conductor** (orchestrates the round, owns this process doc), the **surveyor** (S1), the **cross-examiner** (S2), the **builder** (S3 implementation), and the **gatekeeper** (S3 review, two axes). Each definition is the single source of truth for its role's prompt — the steps below say who does what and which artifacts move between them.
 
-Perform a deep analysis for each of them separately.
-Make a conclusion if it is valid, the reasoning is correct, the proposed solution make sense.
-Write the outcome in three separate files next to review.
-For those you agree with store the issue with no or minimal (in case something important was missed) changes.
-For those you disagree - store the explanation of the flaws of the proposed solution, work out your solution and append to the file.
-File names must follow this pattern `S02-issue-<issue-number>.md`.
-Think of the implementation sequence and if it is possible to implement them in parallel. Write proposed sequence to `S02-issues-impementation-sequence.md`
-```
+- create a folder for the current improvement round `<round-number>-<improvement-type>`
+- S1 — perform a review of a requested type via the **surveyor**; if type is not specified ask user, if type is not defined say to user and stop → `S1-<improvement-type>-review.md`
+- S2 — analyze first three critical issues (or less if their number is smaller) and perform a deep analysis via the **cross-examiner** → one `S02-issue-<issue-number>.md` per issue + `S02-issues-implementation-sequence.md` (order, parallelism/worktree plan, merge protocol)
+- S3 — the **conductor** runs the implementation loop over the sequence, one issue per branch/PR, repeating until the sequence is exhausted:
+  - the **builder** implements the next not-yet-implemented issue: branch `r<round-number>/c<issue-number>-<short-slug>` off the up-to-date `main` (R1 precedent: `r1/c1-phrase-model`), implement exactly per the `S02-issue-<issue-number>.md` file, run the local gate — `puro flutter analyze` + `puro flutter test`, with M8/CI deferred it is the only gate — write `S3-issue-<issue-number>-pr-summary.md`, and create the PR with the gh CLI: title `<type>(r<round-number>): <one-line summary of the change> (C<issue-number>)` (R1 precedent: `refactor(r1): move Phrase to lib/data/phrase.dart + layering guard (C1)`), the pr-summary file as the PR description
+  - the **gatekeeper** reviews the PR along two axes — **Spec** (the diff against the S02 issue file and the pr-summary description, including claims the code must back) and **Standards** (the repo's documented conventions) — and posts findings; the builder addresses them on the branch, re-runs the gate after every review round, and records the rounds in the pr-summary; the gatekeeper is a fresh instance per PR — the author never reviews their own work
+  - the human merges — the merge authority while M8/CI is deferred
+  - after the PR merges: the conductor runs the sequence's integration checklist (gate re-run on the combined `main`); the next issue branches off the updated `main`
 
 Folder structure
 ./R<round-number>-<improvement-type>/
    S1-<improvement-type>-review.md
-   S2-issue-<issue-number>
-
-
-TODO:
-- branch name
-- pr name
-- create pr (gh), summary as description
-- Use gh CLI to perform a code review of the PR#13 in handy-speak repo.
-Read the description and check against it.
-
-
+   S02-issue-<issue-number>.md
+   S02-issues-implementation-sequence.md
+   S3-issue-<issue-number>-pr-summary.md
