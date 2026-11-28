@@ -11,7 +11,7 @@ import 'math_board.dart';
 import 'message_bar.dart';
 import 'notice_banner.dart';
 import 'phrase_strip.dart';
-import 'settings_dialog.dart';
+import 'settings/settings_dialog.dart';
 import 'symbol_board.dart';
 import 'top_bar.dart';
 
