@@ -31,6 +31,7 @@
 | `test/support/app_harness.dart` | Mirrors main.dart: telemetry injected into storage; new optional `storage` parameter for injecting a failing service (constructed before the call, initialized inside it after prefs are seeded). |
 | `integration_test/device_smoke_suite.dart` | 2-line mirror fix: constructs a `TelemetryService` and passes it to `StorageService` so the "Mirror lib/main.dart's wiring" comment stays true. The pair (suite + on-device entry) is intact; still a manual, per-release, device-only run. |
 | `docs/testing-strategy.md` | The Saved-phrases coverage paragraph updated to the new contract (insertion order, ids, migration, `.corrupt` backup, save-failure) and the two new service suites. |
+| `docs/adr/0005-storage-schema-versioning-and-data-safety.md` | **new** (added 2026-11-28 at the owner's request, after round two — docs-only) — ADR-0005 records the persistence policy as standing architecture: the one-schema rule, the crash-safe migration protocol (idempotent steps, version-last, no downgrade), atomicity stance (a), the corrupt-blob backup + quarantine invariants (including the deliberate persist-block and the session-edits sacrifice), write observability at the `StorageService` seam, and the v2 riders (M5 ids, M2 `uses` retirement with its owner-decision provenance). |
 
 No pubspec changes. No `ValueKey` or test-key changes.
 
