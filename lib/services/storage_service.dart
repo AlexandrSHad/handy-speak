@@ -8,13 +8,13 @@ import 'telemetry_service.dart';
 /// Thin wrapper over `shared_preferences` (IMPLEMENTATION_PLAN §5).
 /// Values are stored as JSON-encoded strings or primitives.
 ///
-/// The one write seam (S02-issue-C3 item 3): every `setString` / `setBool`
-/// / `remove` failure is captured under the `storage/write` telemetry scope
-/// with the key name as its only tag — never the value, which can be a
-/// parent-entered phrase (ADR-0004). The failure is re-thrown after the
-/// capture, so callers that await it (the phrase-save path) can react,
-/// while fire-and-forget callers keep today's behaviour — now accompanied
-/// by a capture that names the key.
+/// The one write seam (S02-issue-C3 item 3; policy: ADR-0005): every
+/// `setString` / `setBool` / `remove` failure is captured under the
+/// `storage/write` telemetry scope with the key name as its only tag —
+/// never the value, which can be a parent-entered phrase (ADR-0004). The
+/// failure is re-thrown after the capture, so callers that await it (the
+/// phrase-save path) can react, while fire-and-forget callers keep
+/// today's behaviour — now accompanied by a capture that names the key.
 ///
 /// [init] also runs the schema migrations (`storage_keys.dart`) before it
 /// returns, so no controller can `load()` a pre-migration store.

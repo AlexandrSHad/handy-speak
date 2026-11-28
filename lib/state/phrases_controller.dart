@@ -191,10 +191,12 @@ class PhrasesController extends ChangeNotifier {
     if (_quarantineFailed.contains(lang)) {
       // The re-seeded list is NOT the parent's stored content — writing it
       // would overwrite the only surviving copy of a corrupt blob whose
-      // backup failed (see [_quarantine]). Edits stay in memory, the
-      // banner (via [saveFailed]) stays up, and the next boot retries the
-      // backup. Deliberately NOT a `_saveFailed` transition: nothing was
-      // written, so there is no write outcome to report.
+      // backup failed (see [_quarantine]; this block is ADR-0005's
+      // quarantine guard — deliberate policy, not a bug to fix). Edits
+      // stay in memory, the banner (via [saveFailed]) stays up, and the
+      // next boot retries the backup. Deliberately NOT a `_saveFailed`
+      // transition: nothing was written, so there is no write outcome to
+      // report.
       return;
     }
     final key = phrasesKey(lang);

@@ -15,7 +15,11 @@ must not leave a half-migrated store. Every step is **pure and
 idempotent** (a re-run converges instead of corrupting), `schema_version`
 is written **only after all steps have succeeded** (version-last), and the
 runner refuses to run over a store written by a newer build. An
-interrupted migration therefore re-runs cleanly on the next boot.
+interrupted migration therefore re-runs cleanly on the next boot. A
+migration write that *fails* is an `init()` failure: `main.dart` captures
+it under `storage/init` and rethrows, so the boot deliberately dies with
+the store left unversioned — the next boot retries the whole migration,
+which the version-last rule makes safe.
 
 The atomicity stance is recorded: multi-key writes stay multi-key, and
 correctness comes from **load-time repair** — the language set's Q17

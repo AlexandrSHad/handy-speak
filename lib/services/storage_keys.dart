@@ -6,7 +6,8 @@ import '../core/app_language.dart';
 
 /// The persisted-storage schema: every key HandySpeak writes, the schema
 /// version, and the load-time migration that upgrades old stores (R1
-/// architecture review, issue C3 — [S02-issue-C3]).
+/// architecture review, issue C3 — [S02-issue-C3]; the standing policy is
+/// ADR-0005, `docs/adr/0005-storage-schema-versioning-and-data-safety.md`).
 ///
 /// Controllers own *behaviour* over these keys; this module owns the key
 /// names, so the whole persisted schema is visible in one file and no
