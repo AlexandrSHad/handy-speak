@@ -262,11 +262,11 @@ abstract class AppLocalizations {
   /// **'Quick sentences the child can speak with one tap. Each language keeps its own list.'**
   String get settingsPhrasesDesc;
 
-  /// No description provided for @settingsUsed.
+  /// No description provided for @settingsPhrasesSaveFailed.
   ///
   /// In en, this message translates to:
-  /// **'used'**
-  String get settingsUsed;
+  /// **'Couldn\'t save the phrases — changes may be lost if the app closes.'**
+  String get settingsPhrasesSaveFailed;
 
   /// No description provided for @settingsPin.
   ///

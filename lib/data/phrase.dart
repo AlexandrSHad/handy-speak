@@ -7,6 +7,14 @@ import 'package:flutter/foundation.dart' show immutable;
 /// file, never the other way around (R1 architecture review, issue C1 —
 /// this move breaks the former `data ⇄ state` import cycle).
 ///
+/// Schema v2 (see `services/storage_keys.dart`): entries serialize as
+/// `{id, text, pinned}`. The stable [id] (R1 review, M5) is assigned once —
+/// by the seed data, by `PhrasesController.add`, or by the v1→v2 storage
+/// migration — and never re-derived from position or text, so `remove` and
+/// `togglePin` address exactly one phrase even when two share their text.
+/// The never-incremented `uses` field was removed (M2, owner decision
+/// 2026-11-28 — restore it only alongside a real usage counter).
+///
 /// `@immutable` still comes from `flutter/foundation.dart` — the model's
 /// only framework need, kept from the pre-move file. Importing
 /// `package:meta` instead would make this file pure Dart, but `meta` is
@@ -15,23 +23,25 @@ import 'package:flutter/foundation.dart' show immutable;
 /// framework-free.
 @immutable
 class Phrase {
+  final int id;
   final String text;
   final bool pinned;
-  final int uses;
-  const Phrase({required this.text, this.pinned = false, this.uses = 0});
+  const Phrase({required this.id, required this.text, this.pinned = false});
 
-  Phrase copyWith({String? text, bool? pinned, int? uses}) => Phrase(
+  /// Identity ([id]) is deliberately **not** a `copyWith` parameter: a copy
+  /// is the same phrase with a mutation, never a new or shifted identity —
+  /// that is the whole point of M5 (round-1 review, PR #15).
+  Phrase copyWith({String? text, bool? pinned}) => Phrase(
+        id: id,
         text: text ?? this.text,
         pinned: pinned ?? this.pinned,
-        uses: uses ?? this.uses,
       );
 
-  Map<String, dynamic> toJson() =>
-      {'text': text, 'pinned': pinned, 'uses': uses};
+  Map<String, dynamic> toJson() => {'id': id, 'text': text, 'pinned': pinned};
 
   factory Phrase.fromJson(Map<String, dynamic> j) => Phrase(
+        id: j['id'] as int,
         text: j['text'] as String,
         pinned: j['pinned'] as bool? ?? false,
-        uses: j['uses'] as int? ?? 0,
       );
 }

@@ -241,6 +241,9 @@ class TelemetryService {
     'tts_error_code',
     'phrases_lang',
     'raw_length',
+    // C3 (S02): the storage/write scope's one tag — the persisted key NAME
+    // (e.g. `phrases_en`), never the written value.
+    'storage_key',
   };
 
   /// Breadcrumb names our code may emit; anything else is dropped outright.
@@ -275,13 +278,15 @@ class TelemetryService {
   /// description, and tags only.
   static const Set<String> _suppressMessageScopes = {'phrases/load_corrupt'};
 
-  /// Every instrumented call site (ADDENDUM-06 §2–4). An unlisted scope is a
+  /// Every instrumented call site (ADDENDUM-06 §2–4; `storage/write` since
+  /// C3/S02 — every `StorageService` write failure). An unlisted scope is a
   /// coding slip: its event degrades to type + fixed description + tags
   /// rather than shipping an unreviewed message.
   static const Set<String> _scopeAllowlist = {
     'framework/render',
     'platform',
     'storage/init',
+    'storage/write',
     'tts/init',
     'tts/set_language',
     'tts/voices',

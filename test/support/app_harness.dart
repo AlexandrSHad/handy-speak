@@ -127,13 +127,17 @@ class FakeTts {
 /// from [prefs]. [screen] sizes the viewport (defaults to 1280×800, comfortably
 /// above the settings-dialog breakpoint); [deviceLocale] is what the platform
 /// reports at first run (only consulted when no `main_lang` is stored — a fresh
-/// install), for the language-seeding behaviours.
+/// install), for the language-seeding behaviours. [storage] injects a
+/// replacement `StorageService` (e.g. one whose writes fail on demand) —
+/// constructed before this call, initialized inside it, after [prefs] is
+/// seeded, exactly like the default one.
 Future<TestApp> pumpApp(
   WidgetTester tester, {
   Map<String, Object> prefs = const {},
   Size screen = const Size(1280, 800),
   Locale? deviceLocale,
   String? ttsInitErrorMessage,
+  StorageService? storage,
 }) async {
   tester.view.physicalSize = screen;
   tester.view.devicePixelRatio = 1.0;
@@ -156,8 +160,13 @@ Future<TestApp> pumpApp(
   // `initializing`.
   final readyTx = telemetry.startTransaction('tts/ready');
 
-  final storage = StorageService();
-  await storage.init();
+  // Mirrors main.dart (R1 C3): telemetry is constructed first and injected
+  // into storage — the write-failure seam (`storage/write`) reports into the
+  // app's one telemetry instance, exposed on TestApp for assertions. An
+  // injected [storage] replaces the default entirely (its own constructor
+  // decides its telemetry wiring).
+  final s = storage ?? StorageService(telemetry: telemetry);
+  await s.init();
   final speech = SpeechService(telemetry: telemetry);
 
   void readyListener() {
@@ -169,10 +178,10 @@ Future<TestApp> pumpApp(
   speech.addListener(readyListener);
 
   await speech.init();
-  final settings = SettingsController(storage)..load();
-  final phrases = PhrasesController(storage, telemetry: telemetry)..load();
+  final settings = SettingsController(s)..load();
+  final phrases = PhrasesController(s, telemetry: telemetry)..load();
   final composer = ComposerController();
-  final language = LanguageController(storage, speech, composer)
+  final language = LanguageController(s, speech, composer)
     ..load(deviceLocale: deviceLocale);
 
   composer.addListener(() => telemetry.registerSecret(composer.text));
@@ -194,7 +203,7 @@ Future<TestApp> pumpApp(
   telemetry.installErrorHooks();
 
   await tester.pumpWidget(HandySpeakApp(
-    storage: storage,
+    storage: s,
     speech: speech,
     settings: settings,
     phrases: phrases,
@@ -203,7 +212,7 @@ Future<TestApp> pumpApp(
     speechFeedback: speechFeedback,
   ));
   await tester.pumpAndSettle();
-  return TestApp(storage, tts, telemetry);
+  return TestApp(s, tts, telemetry);
 }
 
 T readProvider<T>(WidgetTester tester) =>

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:handy_speak/core/app_language.dart';
 import 'package:handy_speak/l10n/app_localizations_en.dart';
+import 'package:handy_speak/services/storage_service.dart';
 import 'package:handy_speak/state/composer_controller.dart';
 import 'package:handy_speak/state/phrases_controller.dart';
 import 'package:handy_speak/widgets/keyboard_view.dart';
@@ -13,7 +14,9 @@ import '../support/app_harness.dart';
 /// Settings toggle, editing while hidden, pinned-first order) and loading a
 /// phrase into the message. Migrated from the ADDENDUM-01 "Optional phrase
 /// strip" group, plus the net-new load-into-message behaviour (strategy §4
-/// "Saved phrases · Behavior").
+/// "Saved phrases · Behavior"). Since the C3 batch: the save-failure banner
+/// channel and the v1→v2 store migration running before the controller
+/// loads.
 void main() {
   final en = AppLocalizationsEn();
 
@@ -73,8 +76,8 @@ void main() {
       await closeSettings(tester, en.closeLabel);
 
       expect(find.byType(PhraseStrip), findsOneWidget);
-      // Pinned-first order intact: "I need help" (pinned, 42 uses) leads
-      // "Bathroom please" (pinned, 31 uses).
+      // Pinned-first order intact: "I need help" leads "Bathroom please"
+      // — both pinned, in seed (insertion) order since the M2 change.
       final helpDx = tester.getTopLeft(find.text('I need help')).dx;
       final bathroomDx = tester.getTopLeft(find.text('Bathroom please')).dx;
       expect(helpDx, lessThan(bathroomDx));
@@ -104,6 +107,52 @@ void main() {
 
       // The stored casing is loaded verbatim into the active buffer.
       expect(readProvider<ComposerController>(tester).text, 'I need help');
+    });
+  });
+
+  group('Save-failure banner (C3)', () {
+    testWidgets('a failed phrase save shows the banner; the next '
+        'successful save clears it', (tester) async {
+      final storage = _FlakyPhrasesStorage()..failPhrasesWrites = 1;
+      await pumpApp(tester, prefs: {'show_phrases': false}, storage: storage);
+      await openSettings(tester);
+      await openCategory(tester, 'phrases');
+
+      expect(find.text(en.settingsPhrasesSaveFailed), findsNothing);
+
+      // The add itself works in memory; only the persist fails.
+      await tester.enterText(find.byType(TextField), 'Good morning');
+      await tester.tap(find.text(en.settingsAdd));
+      await tester.pumpAndSettle();
+
+      expect(find.text(en.settingsPhrasesSaveFailed), findsOneWidget);
+      expect(find.text('Good morning'), findsOneWidget);
+
+      // The banner is transient: the next successful persist clears it.
+      await tester.enterText(find.byType(TextField), 'Good night');
+      await tester.tap(find.text(en.settingsAdd));
+      await tester.pumpAndSettle();
+
+      expect(find.text(en.settingsPhrasesSaveFailed), findsNothing);
+      expect(find.text('Good night'), findsOneWidget);
+    });
+  });
+
+  group('Store migration (C3)', () {
+    testWidgets('a v1 store is migrated before the controller loads — '
+        'phrases get ids, uses disappear', (tester) async {
+      await pumpApp(tester, prefs: {
+        'phrases_en': '[{"text":"Legacy","pinned":true,"uses":9}]',
+      });
+
+      // Restored, not re-seeded — only possible if init() upgraded the
+      // blob to v2 before PhrasesController.load() ran (otherwise the
+      // missing id would route the blob to the corrupt/re-seed path).
+      final phrases =
+          readProvider<PhrasesController>(tester).phrasesFor(AppLanguage.en);
+      expect(phrases, hasLength(1));
+      expect(phrases.single.text, 'Legacy');
+      expect(phrases.single.id, 0);
     });
   });
 }
@@ -154,6 +203,24 @@ Finder paneScrollable() => find.descendant(
       of: find.byKey(const ValueKey('settingsPaneScrollable')),
       matching: find.byType(Scrollable),
     );
+
+/// A [StorageService] whose phrase-blob writes fail on demand — drives the
+/// save-failure banner end-to-end through the real pane. The migration
+/// inside init() and every other key go through the real seam.
+class _FlakyPhrasesStorage extends StorageService {
+  /// When > 0, the next phrase-blob `setString` calls fail (decremented
+  /// per failure).
+  int failPhrasesWrites = 0;
+
+  @override
+  Future<void> setString(String key, String value) {
+    if (key.startsWith('phrases_') && failPhrasesWrites > 0) {
+      failPhrasesWrites--;
+      throw Exception('simulated storage failure');
+    }
+    return super.setString(key, value);
+  }
+}
 
 /// The [Switch] sitting in the same toggle row as the [name] label.
 Finder toggleSwitch(String name) => find.descendant(

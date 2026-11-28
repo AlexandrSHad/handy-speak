@@ -50,7 +50,7 @@ lib/
   services/    speech_service (TTS), storage_service (shared_preferences)
   state/       ChangeNotifier controllers: composer, language, phrases, settings
   widgets/     UI; home_page.dart is the root screen
-  l10n/        ARB sources (app_en.arb = template, app_cs.arb) + generated app_localizations*.dart
+  l10n/        ARB sources (app_en.arb = template, app_cs.arb, app_uk.arb) + generated app_localizations*.dart
   main.dart    entry point; orientation lock, DI wiring
 test/               headless widget/unit tests
 integration_test/   device smoke suite (the only on-device suite)
@@ -84,8 +84,9 @@ Android run (`puro flutter test integration_test/device_smoke_test.dart
 
 ## Conventions
 
-- **Localization:** edit only `lib/l10n/app_en.arb` (template) and
-  `app_cs.arb`. Never hand-edit `app_localizations*.dart` — regenerate with
+- **Localization:** edit only `lib/l10n/app_en.arb` (template) and the
+  secondary `app_cs.arb` / `app_uk.arb`. Never hand-edit
+  `app_localizations*.dart` — regenerate with
   `puro flutter gen-l10n` (also regenerated on build); the generated files
   are committed.
 - **Adding a feature:** put controllers in `lib/state/`, static content in

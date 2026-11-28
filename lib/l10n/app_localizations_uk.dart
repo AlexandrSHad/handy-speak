@@ -109,7 +109,8 @@ class AppLocalizationsUk extends AppLocalizations {
       'Швидкі речення, які дитина скаже одним дотиком. Кожна мова має власний список.';
 
   @override
-  String get settingsUsed => 'вжито';
+  String get settingsPhrasesSaveFailed =>
+      'Не вдалося зберегти фрази — зміни можуть бути втрачені після закриття застосунку.';
 
   @override
   String get settingsPin => 'Закріпити';

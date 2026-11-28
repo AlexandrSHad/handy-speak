@@ -37,7 +37,7 @@
   "settingsMoodDesc": "Let the child pick a mood that changes the voice's pitch and speed. Off uses one steady voice.",
   "settingsPhrases": "Phrases",
   "settingsPhrasesDesc": "Quick sentences the child can speak with one tap. Each language keeps its own list.",
-  "settingsUsed": "used",
+  "settingsPhrasesSaveFailed": "Couldn't save the phrases — changes may be lost if the app closes.",
   "settingsPin": "Pin",
   "settingsUnpin": "Unpin",
   "settingsAddPhrase": "Add a phrase the child can quickly speak…",

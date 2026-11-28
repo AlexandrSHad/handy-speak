@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../core/app_language.dart';
 import '../services/speech_service.dart';
+import '../services/storage_keys.dart';
 import '../services/storage_service.dart';
 import 'composer_controller.dart';
 
@@ -33,9 +34,8 @@ class LanguageController extends ChangeNotifier {
   final SpeechService _speech;
   final ComposerController _composer;
 
-  static const _kActiveLang = 'active_lang';
-  static const _kMainLang = 'main_lang';
-  static const _kSecondLang = 'second_lang';
+  // Key names live in `services/storage_keys.dart` (the schema module, R1
+  // C3); this controller owns only the behaviour over them.
 
   AppLanguage _language = AppLanguage.en;
   AppLanguage get language => _language;
@@ -70,7 +70,7 @@ class LanguageController extends ChangeNotifier {
   /// the last active language (Q17), snapping it onto the set when the
   /// stored value is missing or outside it.
   void load({Locale? deviceLocale}) {
-    final storedMain = _storage.getString(_kMainLang);
+    final storedMain = _storage.getString(kMainLangKey);
     if (storedMain == null) {
       _deviceLocale = deviceLocale;
       _mainLang =
@@ -81,11 +81,11 @@ class LanguageController extends ChangeNotifier {
       _secondLang = null;
       _language = _mainLang;
       _persistPair();
-      _storage.setString(_kActiveLang, _language.key);
+      _storage.setString(kActiveLangKey, _language.key);
     } else {
-      _mainLang = _loadSlot(_kMainLang, AppLanguage.en);
-      _secondLang = _loadNullableSlot(_kSecondLang);
-      _language = AppLanguage.fromKey(_storage.getString(_kActiveLang));
+      _mainLang = _loadSlot(kMainLangKey, AppLanguage.en);
+      _secondLang = _loadNullableSlot(kSecondLangKey);
+      _language = AppLanguage.fromKey(_storage.getString(kActiveLangKey));
       // The three keys are independent storage writes (see `_persistPair`),
       // so a corrupted or partially-written store could restore an active
       // language outside the set — snap it back rather than leaving it
@@ -115,7 +115,7 @@ class LanguageController extends ChangeNotifier {
   void setLanguage(AppLanguage next) {
     if (next == _language) return;
     _language = next;
-    _storage.setString(_kActiveLang, next.key);
+    _storage.setString(kActiveLangKey, next.key);
 
     // §6.1.1 — cancel speech, clear the sentence (math survives), flip voice.
     _speech.stop();
@@ -180,12 +180,12 @@ class LanguageController extends ChangeNotifier {
   }
 
   void _persistPair() {
-    _storage.setString(_kMainLang, _mainLang.key);
+    _storage.setString(kMainLangKey, _mainLang.key);
     if (_secondLang == null) {
       // Absent key = no second language (Q5) — remove, never encode "none".
-      _storage.remove(_kSecondLang);
+      _storage.remove(kSecondLangKey);
     } else {
-      _storage.setString(_kSecondLang, _secondLang!.key);
+      _storage.setString(kSecondLangKey, _secondLang!.key);
     }
   }
 }

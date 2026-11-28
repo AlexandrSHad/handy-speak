@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../services/storage_keys.dart';
 import '../services/storage_service.dart';
 
 /// App-wide preferences (IMPLEMENTATION_PLAN Task 8). Dark mode and haptics
@@ -10,14 +11,8 @@ class SettingsController extends ChangeNotifier {
 
   final StorageService _storage;
 
-  static const _kDark = 'dark_mode';
-  static const _kHaptics = 'haptics';
-  static const _kBigLetters = 'big_letters';
-  static const _kShowPhrases = 'show_phrases';
-  static const _kSpeakLetters = 'speak_letters';
-  static const _kSpeakWords = 'speak_words';
-  static const _kSpeakSymbols = 'speak_symbols';
-  static const _kSpeakPhrases = 'speak_phrases';
+  // Key names live in `services/storage_keys.dart` (the schema module, R1
+  // C3); this controller owns only the behaviour over them.
 
   bool _dark = false;
   bool get dark => _dark;
@@ -51,61 +46,61 @@ class SettingsController extends ChangeNotifier {
   bool get moodEnabled => false;
 
   void load() {
-    _dark = _storage.getBool(_kDark, fallback: false);
-    _haptics = _storage.getBool(_kHaptics, fallback: true);
-    _bigLetters = _storage.getBool(_kBigLetters, fallback: false);
-    _showPhrases = _storage.getBool(_kShowPhrases, fallback: true);
-    _speakLetters = _storage.getBool(_kSpeakLetters, fallback: false);
-    _speakWords = _storage.getBool(_kSpeakWords, fallback: false);
-    _speakSymbols = _storage.getBool(_kSpeakSymbols, fallback: false);
-    _speakPhrases = _storage.getBool(_kSpeakPhrases, fallback: false);
+    _dark = _storage.getBool(kDarkModeKey, fallback: false);
+    _haptics = _storage.getBool(kHapticsKey, fallback: true);
+    _bigLetters = _storage.getBool(kBigLettersKey, fallback: false);
+    _showPhrases = _storage.getBool(kShowPhrasesKey, fallback: true);
+    _speakLetters = _storage.getBool(kSpeakLettersKey, fallback: false);
+    _speakWords = _storage.getBool(kSpeakWordsKey, fallback: false);
+    _speakSymbols = _storage.getBool(kSpeakSymbolsKey, fallback: false);
+    _speakPhrases = _storage.getBool(kSpeakPhrasesKey, fallback: false);
   }
 
   void setDark(bool value) {
     _dark = value;
-    _storage.setBool(_kDark, value);
+    _storage.setBool(kDarkModeKey, value);
     notifyListeners();
   }
 
   void setHaptics(bool value) {
     _haptics = value;
-    _storage.setBool(_kHaptics, value);
+    _storage.setBool(kHapticsKey, value);
     notifyListeners();
   }
 
   void setBigLetters(bool value) {
     _bigLetters = value;
-    _storage.setBool(_kBigLetters, value);
+    _storage.setBool(kBigLettersKey, value);
     notifyListeners();
   }
 
   void setShowPhrases(bool value) {
     _showPhrases = value;
-    _storage.setBool(_kShowPhrases, value);
+    _storage.setBool(kShowPhrasesKey, value);
     notifyListeners();
   }
 
   void setSpeakLetters(bool value) {
     _speakLetters = value;
-    _storage.setBool(_kSpeakLetters, value);
+    _storage.setBool(kSpeakLettersKey, value);
     notifyListeners();
   }
 
   void setSpeakWords(bool value) {
     _speakWords = value;
-    _storage.setBool(_kSpeakWords, value);
+    _storage.setBool(kSpeakWordsKey, value);
     notifyListeners();
   }
 
   void setSpeakSymbols(bool value) {
     _speakSymbols = value;
-    _storage.setBool(_kSpeakSymbols, value);
+    _storage.setBool(kSpeakSymbolsKey, value);
     notifyListeners();
   }
 
   void setSpeakPhrases(bool value) {
     _speakPhrases = value;
-    _storage.setBool(_kSpeakPhrases, value);
+    _storage.setBool(kSpeakPhrasesKey, value);
     notifyListeners();
   }
 }

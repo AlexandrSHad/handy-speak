@@ -37,7 +37,7 @@
   "settingsMoodDesc": "Dítě si může vybrat náladu, která mění výšku a rychlost hlasu. Vypnuto = jeden stálý hlas.",
   "settingsPhrases": "Fráze",
   "settingsPhrasesDesc": "Rychlé věty, které dítě řekne jedním ťuknutím. Každý jazyk má vlastní seznam.",
-  "settingsUsed": "použito",
+  "settingsPhrasesSaveFailed": "Fráze se nepodařilo uložit — změny se mohou po zavření aplikace ztratit.",
   "settingsPin": "Připnout",
   "settingsUnpin": "Odepnout",
   "settingsAddPhrase": "Přidej frázi, kterou dítě rychle řekne…",

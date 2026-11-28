@@ -405,10 +405,10 @@ int getVoicesCalls(TestApp app) =>
 
 /// The JSON `PhrasesController` persists under `phrases_<lang>` — seeded
 /// directly, because the controller decides fresh-install vs. restore by key
-/// presence.
+/// presence. v2 schema shape: `{id, text, pinned}`.
 String seedPhrasesJson(int count) => jsonEncode([
       for (var i = 0; i < count; i++)
-        {'text': 'Seeded phrase ${i + 1}', 'pinned': false, 'uses': 0},
+        {'id': i, 'text': 'Seeded phrase ${i + 1}', 'pinned': false},
     ]);
 
 Future<void> openSettings(WidgetTester tester) async {
