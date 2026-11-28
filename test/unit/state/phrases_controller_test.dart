@@ -182,6 +182,9 @@ void main() {
         '(S02 item 4)', () async {
       const raw = 'this is not json {{{';
       final (phrases, storage) = await boot(prefs: {'phrases_en': raw});
+      // The remove is chained after the backup write completes — let the
+      // chain settle before asserting the key drop.
+      await Future<void>.delayed(Duration.zero);
 
       // Backup happened BEFORE the re-seeding overwrote anything…
       expect(storage.getString(phrasesCorruptKey(AppLanguage.en)), raw);

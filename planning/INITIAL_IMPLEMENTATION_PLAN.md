@@ -149,7 +149,7 @@ class Pictogram {
 class Phrase {
   final String text;
   final bool pinned;
-  final int uses;
+  final int uses; // superseded by C3 — uses retired 2026-11-28, replaced by a stable id
   // stored under a per-language key, e.g. "phrases_en" / "phrases_cs"
 }
 ```
@@ -296,7 +296,7 @@ This is the highest-risk piece, so prove it before building UI.
 - [ ] `PhrasesController` holds a **per-language** list of phrases (seed each
       language with a handful of starters). Tapping a phrase loads it into the
       message bar.
-- [ ] `PhraseStrip` shows pinned-first, then by use count.
+- [ ] `PhraseStrip` shows pinned-first, then by use count. *(superseded by C3, 2026-11-28: uses retired — pinned-first, then insertion order)*
 - [ ] Persist via `StorageService` (`shared_preferences`, JSON, keyed per language).
 - **Done when:** phrases differ by language, survive an app restart, and tapping
   one composes it.

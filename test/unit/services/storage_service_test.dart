@@ -1,7 +1,10 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:handy_speak/core/app_language.dart';
+import 'package:handy_speak/data/phrases_data.dart';
 import 'package:handy_speak/services/storage_service.dart';
 import 'package:handy_speak/services/telemetry_service.dart';
+import 'package:handy_speak/state/phrases_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Unit coverage for StorageService's write seam and init-time migration
@@ -10,6 +13,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 // the value, which can be a parent-entered phrase (ADR-0004 canary below)
 // — and the migration runs inside init() version-last: a failed
 // step-write leaves the marker unwritten and the next init converges.
+// Since PR #15 round one: also the corrupt-blob quarantine pins —
+// PhrasesController's load-failure path driven over this same fake disk,
+// the environment the gatekeeper verified against the actual plugin.
 //
 // Failing writes need the write to fail at the plugin level, so these
 // suites mock the `plugins.flutter.io/shared_preferences` method channel
@@ -21,24 +27,31 @@ const MethodChannel _prefsChannel =
 
 /// The fake "disk" behind the channel: `getAll` reads it, `set*`/`remove`
 /// write it — and every write fails while [failWrites] is set, exactly
-/// like a full or broken SharedPreferences backend.
+/// like a full or broken SharedPreferences backend. [failCorruptWrites]
+/// fails only the `.corrupt` quarantine writes.
 class _FakeDisk {
   final Map<String, Object> data = {};
   bool failWrites = false;
+  bool failCorruptWrites = false;
+
+  bool _shouldFail(String key) =>
+      failWrites || (failCorruptWrites && key.endsWith('.corrupt'));
 
   Future<Object?> handle(MethodCall call) async {
     switch (call.method) {
       case 'getAll':
         return data;
       case 'remove':
-        if (failWrites) throw PlatformException(code: 'test-io');
-        data.remove((call.arguments as Map)['key']);
+        final key = (call.arguments as Map)['key'] as String;
+        if (_shouldFail(key)) throw PlatformException(code: 'test-io');
+        data.remove(key);
         return true;
       default:
         // setString / setBool / setInt — the plugin prefixes keys itself.
-        if (failWrites) throw PlatformException(code: 'test-io');
         final args = call.arguments as Map;
-        data[args['key'] as String] = args['value'] as Object;
+        final key = args['key'] as String;
+        if (_shouldFail(key)) throw PlatformException(code: 'test-io');
+        data[key] = args['value'] as Object;
         return true;
     }
   }
@@ -164,6 +177,95 @@ void main() {
     expect(disk.data['flutter.phrases_en'],
         '[{"text":"Hi","pinned":false,"id":0}]');
     expect(disk.data['flutter.schema_version'], 2);
+  });
+
+  group('PhrasesController · corrupt-blob quarantine (PR #15 round 1)', () {
+    // The round-1 blocking-fix pins, at controller level, over this file's
+    // channel-level disk — the faithful environment for exactly what the
+    // gatekeeper verified: the real plugin (shared_preferences 2.5.5)
+    // mutates its Dart-side cache synchronously BEFORE the platform call,
+    // so a rejected setString leaves the in-process cache looking written
+    // while the disk never saw it. Assertions therefore go to the disk map
+    // (what a reboot actually reads), and every boot below is a full
+    // next-boot: resetStatic + fresh instances re-reading getAll.
+    Future<(PhrasesController, StorageService)> bootController() async {
+      SharedPreferences.resetStatic();
+      final storage = StorageService(telemetry: telemetry);
+      await storage.init();
+      return (
+        PhrasesController(storage, telemetry: telemetry)..load(),
+        storage
+      );
+    }
+
+    test('a failed backup leaves the original key on disk and the remove '
+        'unissued', () async {
+      const raw = 'this is not json {{{';
+      disk.data['flutter.phrases_en'] = raw;
+      disk.failCorruptWrites = true;
+
+      final (phrases, _) = await bootController();
+      await Future<void>.delayed(Duration.zero); // let the chain settle
+
+      // The backup never reached the disk…
+      expect(disk.data.containsKey('flutter.phrases_en.corrupt'), isFalse);
+      // …so the remove was never issued: the original key — the only
+      // surviving copy — is still there and readable by the next boot.
+      // (The plugin's in-process cache claims the backup happened; the
+      // disk is the truth a reboot reads.)
+      expect(disk.data['flutter.phrases_en'], raw);
+      expect(phrases.saveFailed, isTrue);
+    });
+
+    test('a mutation while quarantined does NOT overwrite the original key',
+        () async {
+      const raw = 'this is not json {{{';
+      disk.data['flutter.phrases_en'] = raw;
+      disk.failCorruptWrites = true;
+      final (phrases, _) = await bootController();
+      await Future<void>.delayed(Duration.zero);
+
+      phrases.add(AppLanguage.en, 'edit while quarantined');
+      await Future<void>.delayed(Duration.zero);
+
+      // The edit is visible in memory (the list re-seeded, plus the row)…
+      expect(phrases.phrasesFor(AppLanguage.en).map((p) => p.text),
+          contains('edit while quarantined'));
+      // …but the store was not written: a re-seeded blob would overwrite
+      // the only surviving copy of the parent's content.
+      expect(disk.data['flutter.phrases_en'], raw);
+      expect(disk.data.containsKey('flutter.phrases_en.corrupt'), isFalse);
+    });
+
+    test('saveFailed holds while quarantined and clears only via a next '
+        'boot with a working backup', () async {
+      const raw = 'this is not json {{{';
+      disk.data['flutter.phrases_en'] = raw;
+
+      // Boot 1: the backup fails — quarantined, banner up.
+      disk.failCorruptWrites = true;
+      final (first, _) = await bootController();
+      await Future<void>.delayed(Duration.zero);
+      expect(first.saveFailed, isTrue);
+
+      // Boot 2 (fresh instances, same disk): the backup still fails — the
+      // state does not silently clear, and the original key survives.
+      final (second, _) = await bootController();
+      await Future<void>.delayed(Duration.zero);
+      expect(second.saveFailed, isTrue);
+      expect(disk.data['flutter.phrases_en'], raw);
+
+      // Boot 3 (backup healthy): the quarantine completes — the key is
+      // dropped, the copy exists, the banner is down.
+      disk.failCorruptWrites = false;
+      final (third, _) = await bootController();
+      await Future<void>.delayed(Duration.zero);
+      expect(third.saveFailed, isFalse);
+      expect(disk.data.containsKey('flutter.phrases_en'), isFalse);
+      expect(disk.data['flutter.phrases_en.corrupt'], raw);
+      expect(third.phrasesFor(AppLanguage.en),
+          hasLength(kSeedPhrases[AppLanguage.en]!.length));
+    });
   });
 }
 

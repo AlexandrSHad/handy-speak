@@ -28,8 +28,11 @@ class Phrase {
   final bool pinned;
   const Phrase({required this.id, required this.text, this.pinned = false});
 
-  Phrase copyWith({int? id, String? text, bool? pinned}) => Phrase(
-        id: id ?? this.id,
+  /// Identity ([id]) is deliberately **not** a `copyWith` parameter: a copy
+  /// is the same phrase with a mutation, never a new or shifted identity —
+  /// that is the whole point of M5 (round-1 review, PR #15).
+  Phrase copyWith({String? text, bool? pinned}) => Phrase(
+        id: id,
         text: text ?? this.text,
         pinned: pinned ?? this.pinned,
       );

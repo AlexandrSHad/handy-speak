@@ -94,7 +94,8 @@ designing) before starting.
 - Show-phrase-shortcuts toggle (`settingsShowPhrasesName` / `…Desc`) and,
   when off, the hidden-note line (`settingsPhrasesHiddenNote`).
 - The phrase list: pin marker, phrase text, "N× used" count, Pin/Unpin
-  action, delete action.
+  action, delete action. *(the "N× used" count is superseded by C3,
+  2026-11-28 — uses retired)*
 - The add row: text field (`settingsAddPhrase`) plus the Add button.
 
 **Accessibility**
