@@ -42,7 +42,10 @@ Future<void> main() async {
       DeviceOrientation.landscapeRight,
     ]);
 
-    final storage = StorageService();
+    // Telemetry is constructed before storage so the write seam can be
+    // wired as a parameter — StorageService instruments every
+    // setString/setBool/remove failure under `storage/write` (C3/S02).
+    final storage = StorageService(telemetry: telemetry);
     try {
       await storage.init();
     } catch (e, st) {

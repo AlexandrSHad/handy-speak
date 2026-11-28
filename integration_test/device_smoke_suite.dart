@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:handy_speak/main.dart';
 import 'package:handy_speak/services/speech_service.dart';
 import 'package:handy_speak/services/storage_service.dart';
+import 'package:handy_speak/services/telemetry_service.dart';
 import 'package:handy_speak/services/tts_engine.dart';
 import 'package:handy_speak/state/composer_controller.dart';
 import 'package:handy_speak/state/language_controller.dart';
@@ -23,8 +24,11 @@ void runDeviceSmokeSuite() {
   testWidgets('app boots to HomePage', (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
 
-    // Mirror lib/main.dart's service + controller wiring.
-    final storage = StorageService();
+    // Mirror lib/main.dart's service + controller wiring: telemetry is
+    // built before storage so the write seam (`storage/write`, C3) can be
+    // wired as a parameter.
+    final telemetry = TelemetryService();
+    final storage = StorageService(telemetry: telemetry);
     await storage.init();
 
     final speech = SpeechService(engine: FlutterTtsEngine());

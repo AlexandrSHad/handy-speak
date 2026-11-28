@@ -107,7 +107,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Quick sentences the child can speak with one tap. Each language keeps its own list.';
 
   @override
-  String get settingsUsed => 'used';
+  String get settingsPhrasesSaveFailed =>
+      'Couldn\'t save the phrases — changes may be lost if the app closes.';
 
   @override
   String get settingsPin => 'Pin';

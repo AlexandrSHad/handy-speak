@@ -108,7 +108,8 @@ class AppLocalizationsCs extends AppLocalizations {
       'Rychlé věty, které dítě řekne jedním ťuknutím. Každý jazyk má vlastní seznam.';
 
   @override
-  String get settingsUsed => 'použito';
+  String get settingsPhrasesSaveFailed =>
+      'Fráze se nepodařilo uložit — změny se mohou po zavření aplikace ztratit.';
 
   @override
   String get settingsPin => 'Připnout';

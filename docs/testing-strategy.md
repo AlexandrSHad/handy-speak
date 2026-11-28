@@ -126,11 +126,15 @@ The separate math buffer and its spoken translation.
 
 ### Saved phrases
 The per-language phrase store: seeding, ordering, mutation, persistence.
-- _Unit:_ `PhrasesController` — pinned-first/uses-descending sort, seed vs restore,
-  JSON round-trip, corruption falls back to seed, empty add rejected, remove/toggle
-  matching.
+- _Unit:_ `PhrasesController` — pinned-first/insertion sort, seed vs restore,
+  JSON round-trip with stable ids, id-based remove/toggle, the v1→v2
+  migration, corruption falls back to seed with a `.corrupt` backup,
+  save-failure state, empty add rejected. (The schema module and the
+  StorageService write seam have their own unit suites under
+  `test/unit/services/`.)
 - _Behavior:_ loading a phrase into the message; the phrase strip showing/hiding
-  per the Settings toggle.
+  per the Settings toggle; the save-failure banner; a v1 store migrating
+  before the controller loads.
 
 ### Language set & localization
 The main/second language pair, first-run seeding, the active language, and the

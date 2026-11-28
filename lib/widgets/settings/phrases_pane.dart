@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/language_controller.dart';
 import '../../state/phrases_controller.dart';
 import '../../state/settings_controller.dart';
+import '../notice_banner.dart';
 import 'pane_scaffold.dart';
 import 'toggle_row.dart';
 
@@ -57,6 +58,15 @@ class _PhrasesPaneState extends State<PhrasesPane> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Save-failure channel (S02-issue-C3 item 3): the
+                // controller exposes the transient save-failure state,
+                // this pane already watches it — one conditional banner,
+                // cleared by the next successful save.
+                if (phrasesCtrl.saveFailed)
+                  NoticeBanner(
+                    kind: NoticeKind.error,
+                    text: l10n.settingsPhrasesSaveFailed,
+                  ),
                 ToggleRow(
                   name: l10n.settingsShowPhrasesName,
                   desc: l10n.settingsShowPhrasesDesc,
@@ -104,9 +114,10 @@ class _PhrasesPaneState extends State<PhrasesPane> {
                                 fontWeight: FontWeight.w600),
                           ),
                         ),
-                        Text('${p.uses}× ${l10n.settingsUsed}',
-                            style:
-                                TextStyle(color: colors.ink3, fontSize: 12)),
+                        // The "N× used" count was removed with the `uses`
+                        // field (M2, owner decision 2026-11-28): the counter
+                        // was never incremented, so the number shown here
+                        // was a frozen seed fabrication.
                         TextButton(
                           onPressed: () =>
                               context.read<PhrasesController>().togglePin(
