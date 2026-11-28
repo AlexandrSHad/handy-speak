@@ -3,21 +3,21 @@
 - **Issue:** C2 from [S01-architecture-review.md](S01-architecture-review.md) §3.1, as analyzed and amended in [S02-issue-C2.md](S02-issue-C2.md) — the 1,101-line god file owning the highest-churn parent surface.
 - **Branch:** `r1/c2-settings-split`, a plain branch off `main` (C1 is already merged, so the worktree parallelism the sequence sketched is moot). Not merged by the builder; the human merges, the gatekeeper approves.
 - **Date:** 2026-11-27
-- **Gate (the only one — M8/CI is deferred, S02 §2):** `puro flutter analyze` — **No issues found** · `puro flutter test` — **338/338, all passing** (main's exact count; no tests added — the split is behavior-preserving and the S02 pinning suites already exist). The S02 §4 verification list (c) — the six dialog suites — was also run standalone first: **67/67**.
+- **Gate (the only one — M8/CI is deferred, S02 §2):** `puro flutter analyze` — **No issues found** · `puro flutter test` — re-run after each §6 review round: **338/338 after round one** (round one was description-only; main's exact count — no tests added, the split is behavior-preserving and the S02 pinning suites already exist). The S02 §4 verification list (c) — the six dialog suites — was also run standalone first: **67/67**.
 
 ## 1. What changed
 
-The 1,101-line `lib/widgets/settings_dialog.dart` became seven files (1,078 lines total) under `lib/widgets/settings/`, exactly the layout S02 §4 prescribes:
+The 1,101-line `lib/widgets/settings_dialog.dart` became seven files under `lib/widgets/settings/`, exactly the layout S02 §4 prescribes — **1,154 lines total, +53 net**: 43 import lines across the seven file headers replacing the old file's 11, six net added blank lines, the 12 added doc-comment lines (§3 item 2), the 3-for-2 Deferred-sentence swap, and the two standalone `super.key` lines. The import duplication is the expected, accepted cost of a split — and the corrected numbers still tell the intended story: the largest file drops from 1,101 lines to 303.
 
 | File | Lines | Contents |
 |---|---|---|
-| `lib/widgets/settings/settings_dialog.dart` | 282 | **new** — the shell: `showSettingsDialog` (doc + `useRootNavigator` comment verbatim), `SettingsCategory`, `_SettingsDialog(+State)` with the breakpoint and the `IndexedStack` (children in enum order), `_CategoryRail`, `_RailEntry`. |
-| `lib/widgets/settings/language_pane.dart` | 250 | **new** — `LanguagePane`, `_LanguageSection(+State)` with the whole voice-probe machine (generation counter, dual listeners, dispose guards) moved verbatim, and `_VoiceSection`. |
-| `lib/widgets/settings/phrases_pane.dart` | 167 | **new** — `PhrasesPane(+State)`; the class doc comment moves verbatim. |
-| `lib/widgets/settings/language_dropdown_field.dart` | 107 | **new** — `LanguageDropdownField` (public per S02); **the 40-line recipe doc comment moves verbatim**, and CLAUDE.md's pointer follows it (§1 last row). |
-| `lib/widgets/settings/accessibility_pane.dart` | 93 | **new** — `AccessibilityPane` (7 toggle rows + speech-feedback group). |
-| `lib/widgets/settings/pane_scaffold.dart` | 91 | **new** — `PaneHeader`, `PaneScrollBody` (public per S02); docs verbatim; the `settingsPaneScrollable` key unchanged. |
-| `lib/widgets/settings/toggle_row.dart` | 88 | **new** — `ToggleRow`, `SectionTitle` (public per S02). |
+| `lib/widgets/settings/settings_dialog.dart` | 303 | **new** — the shell: `showSettingsDialog` (doc + `useRootNavigator` comment verbatim), `SettingsCategory`, `_SettingsDialog(+State)` with the breakpoint and the `IndexedStack` (children in enum order), `_CategoryRail`, `_RailEntry`. |
+| `lib/widgets/settings/language_pane.dart` | 272 | **new** — `LanguagePane`, `_LanguageSection(+State)` with the whole voice-probe machine (generation counter, dual listeners, dispose guards) moved verbatim, and `_VoiceSection`. |
+| `lib/widgets/settings/phrases_pane.dart` | 175 | **new** — `PhrasesPane(+State)`; the class doc comment moves verbatim. |
+| `lib/widgets/settings/language_dropdown_field.dart` | 113 | **new** — `LanguageDropdownField` (public per S02); **the recipe doc comment moves verbatim** — **22 lines** (old file 755–776); S02's own descriptor says "the 40-line recipe doc comment", which miscounts — the real count is 22, and the verbatim move is what matters. CLAUDE.md's pointer follows it (§1 last row). |
+| `lib/widgets/settings/accessibility_pane.dart` | 97 | **new** — `AccessibilityPane` (7 toggle rows + speech-feedback group). |
+| `lib/widgets/settings/pane_scaffold.dart` | 99 | **new** — `PaneHeader`, `PaneScrollBody` (public per S02); docs verbatim; the `settingsPaneScrollable` key unchanged. |
+| `lib/widgets/settings/toggle_row.dart` | 95 | **new** — `ToggleRow`, `SectionTitle` (public per S02). |
 | `lib/widgets/settings_dialog.dart` | — | **deleted** (1,101 lines). |
 | `lib/widgets/home_page.dart` | 2 | **S02 addition (a):** the sole caller's import `settings_dialog.dart` → `settings/settings_dialog.dart` (same position in the sorted import block). |
 | `CLAUDE.md` | 3 | **S02 addition (b):** "Dropdowns follow the `LanguageDropdownField` recipe in `lib/widgets/settings/language_dropdown_field.dart`" — new public name and path. |
@@ -50,7 +50,13 @@ The S02 §4 extracting-agent rules, each checked:
 - Every `ValueKey` string byte-identical: `settingsVersion`, `settingsCategory_${name}`, `settingsPaneScrollable`, `settingsSecondLangSwitch`, `settingsLangDropdown_${slot}`, `settingsLangItem_${slot}_${lang}`, `settingsAddPhraseField`.
 - Pane stateful behavior unchanged: the voice-probe machine and the `TextEditingController`/pinned-add-bar ownership moved line-for-line; `settings_test.dart`'s "half-typed phrase survives a category round-trip" and "dialog opens on Language every time" pass unchanged.
 
-**The verbatim claim is mechanical, not asserted:** the old file (from `git show HEAD:`) and the concatenation of the seven new files were compared as exact per-line-count multisets after applying only the eight public renames and normalizing the `super.key` insertions. The complete diff is: the 14 doc-comment lines of §3 item 2, one `///` separator, the 3-for-2 Deferred-sentence swap of §3 item 3, and two lines that are artifacts of the rename normalization itself (`_PhrasesPaneState` — identical in both, only the normalization's `_PhrasesPane`→`PhrasesPane` rewrite makes them look different). Every other line of the 1,101 appears exactly the same number of times in the seven files.
+**The verbatim claim is mechanical, not asserted.** The old file (from `git show 769829a:lib/widgets/settings_dialog.dart`, the pre-split commit) and the concatenation of the seven new files were compared as exact per-line-count multisets after three normalization steps, enumerated here so the check reproduces as stated:
+
+1. **Import-header stripping** — every `import` line removed from both sides (the old file's 11, the seven new headers' 43).
+2. **The eight public renames, applied to the old text** — `_LanguageDropdownField`→`LanguageDropdownField`, `_PaneScrollBody`→`PaneScrollBody`, `_PaneHeader`→`PaneHeader`, `_LanguagePane`→`LanguagePane`, `_PhrasesPane`→`PhrasesPane`, `_AccessibilityPane`→`AccessibilityPane`, `_SectionTitle`→`SectionTitle`, `_ToggleRow`→`ToggleRow`.
+3. **`super.key` normalization, applied to the new text** — `{super.key}` removed, `{super.key, ` → `{`, standalone `super.key,` lines dropped.
+
+Blank lines were dropped and the remaining lines trimmed before counting. The complete residue: the **12 doc-comment lines** of §3 item 2 (11 text lines — `LanguagePane` 3, `AccessibilityPane` 2, `ToggleRow` 4, `SectionTitle` 2 — plus one blank `///` separator), the 3-for-2 Deferred-sentence swap of §3 item 3, and two lines that are artifacts of the rename normalization itself (`_PhrasesPaneState` — identical in both; only the normalization's `_PhrasesPane`→`PhrasesPane` rewrite makes them look different). Every other line of the 1,101 appears exactly the same number of times in the seven files.
 
 Gate runs: `puro flutter analyze` → **No issues found**; the six S02 §4(c) suites standalone → **67/67**; full `puro flutter test` → **338/338 All tests passed**, identical to `main`'s count (the ADDENDUM-04 height-parity tests at text scales 1.0/1.3 — the reason heights could not drift — are inside that run and pass).
 
@@ -64,4 +70,9 @@ Gate runs: `puro flutter analyze` → **No issues found**; the six S02 §4(c) su
 
 ## 6. Review follow-ups
 
-No review rounds yet — this section fills after each gatekeeper round, with the gate re-run and the branch pushed after every one.
+**Round one** (gatekeeper, 2026-11-27 — [PR #14 comment](https://github.com/AlexandrSHad/handy-speak/pull/14#issuecomment-7229680056)): **2 findings, both NIT, 0 blocking** — the split itself judged spec-compliant and merge-quality, the verbatim claim independently reproduced, and all five declared deviations accepted. Both findings were quantitative inaccuracies in this summary, not in the code; both fixed by description-only edits in this round:
+
+1. **§1 line-count table wrong.** Claimed 282/250/167/107/93/91/88 = 1,078 total, which reads as the split trimming 23 lines — it actually **adds 53 net** (1,101 → 1,154; `git diff --numstat` gives 303/272/175/113/97/99/95). Fix: the table, the total, and the framing corrected in §1, with the import duplication stated as the expected, accepted cost of the split — the intended story survives the correction (largest file 1,101 → 303).
+2. **§4 miscounted and under-described its own method.** (a) "the 14 doc-comment lines … one `///` separator" → the actual additions are **12 lines** (11 doc + the separator). (b) The comparison said "after applying only the eight public renames and normalizing the `super.key` insertions" — as written not reproducible, because the import-header stripping (old 11 / new 43) the script also applied was unstated. (c) "the 40-line recipe doc comment" is **22 lines** (old file 755–776); "40-line" was inherited from S02's own miscount. Fix: all three corrected — the counts in §1/§4, every normalization step enumerated in §4 as a numbered list, and the S02 descriptor's error noted where the citation lives.
+
+Gate re-run after the round: `puro flutter analyze` — **No issues found** · `puro flutter test` — **338/338, all passing** (unchanged — round one was description-only; no code, test, or generated file touched).
